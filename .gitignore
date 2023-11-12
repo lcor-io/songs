@@ -1,0 +1,5 @@
+
+# Ignore build files
+tmp
+*_templ.go
+
