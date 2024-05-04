@@ -1,5 +1,8 @@
 
 # Ignore build files
 tmp
-*_templ.go
+dist
+node_modules
 
+# Ignore env files
+*.env

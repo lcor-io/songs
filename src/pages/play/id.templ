@@ -1,0 +1,14 @@
+package play
+
+import "lcor.io/songs/src/templates"
+
+templ Playlist(id string) {
+	@templates.Index("Play") {
+		<main hx-boost="true">
+			<a href="/play">Back</a>
+			<div hx-ext="sse" sse-connect={ "/play/" + id + "/events" } sse-swap="message">
+				Content should be replaced by SSE message
+			</div>
+		</main>
+	}
+}

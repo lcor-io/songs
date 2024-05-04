@@ -1,0 +1,15 @@
+package components
+
+import "lcor.io/songs/src/services"
+
+templ PlaylistCover(playlist services.Playlist) {
+	<a class="group px-4" href={ templ.URL("/play/" + playlist.Id) }>
+		<img
+			src={ playlist.Images[0].Url }
+			width="300"
+			height="300"
+			class="rounded-lg shadow transition-all cursor-pointer group-hover:scale-105 group-hover:shadow-lg"
+			alt={ playlist.Name }
+		/>
+	</a>
+}

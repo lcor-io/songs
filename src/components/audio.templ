@@ -1,0 +1,8 @@
+package components
+
+import "lcor.io/songs/src/services"
+
+templ Audio(track services.Track) {
+	{ track.Name }
+	<audio autoplay src={ track.PreviewUrl }></audio>
+}
