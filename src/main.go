@@ -49,10 +49,10 @@ func main() {
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).SendString("Error getting session")
 		}
-		fmt.Printf("Session ID: %s\n", sess.ID())
 		if err := sess.Save(); err != nil {
 			return c.Status(fiber.StatusInternalServerError).SendString("Error setting session")
 		}
+		c.Locals("session", sess.ID())
 		return c.Next()
 	})
 

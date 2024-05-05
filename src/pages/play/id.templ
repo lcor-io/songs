@@ -1,14 +1,33 @@
 package play
 
 import "lcor.io/songs/src/templates"
+import "fmt"
 
 templ Playlist(id string) {
 	@templates.Index("Play") {
 		<main>
 			<a href="/play">Back</a>
-			<div hx-ext="sse" sse-connect={ "/play/" + id + "/events" } sse-swap="message">
+			<div hx-ext="sse" sse-connect={ string(templ.URL(fmt.Sprintf("/play/%s/events", id))) } sse-swap="message">
 				Content should be replaced by SSE message
 			</div>
+			<form
+				id="guess-form"
+				method="post"
+				hx-target="#guess-results"
+				hx-swap="beforeend"
+				action={ templ.URL(fmt.Sprintf("/play/%s/guess", id)) }
+				hx-post={ string(templ.URL(fmt.Sprintf("/play/%s/guess", id))) }
+			>
+				<input
+					type="text"
+					name="guess"
+					autofocus
+					placeholder="What's your take?"
+					class="border border-slate-500 rounded focus:outline-slate-500 focus:outline"
+				/>
+				<button type="submit">Guess</button>
+			</form>
+			<div id="guess-results"></div>
 		</main>
 	}
 }
