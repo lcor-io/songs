@@ -1,8 +1,25 @@
 package components
 
+import "fmt"
 import "lcor.io/songs/src/services"
 
 templ Audio(track services.Track) {
 	{ track.Name }
 	<audio autoplay src={ track.PreviewUrl }></audio>
+	<div id="guess-results" hx-swap-oob="true">
+		<div class="flex flex-col">
+			<p>
+				Title:
+				<span class="text-red-500">Incorrect</span>
+			</p>
+			<ul>
+				for index := range track.Artists {
+					<li>
+						Artist { fmt.Sprintf("%d", index) }: 
+						<span class="text-red-500">Incorrect</span>
+					</li>
+				}
+			</ul>
+		</div>
+	</div>
 }

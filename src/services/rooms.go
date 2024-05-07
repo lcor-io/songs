@@ -19,8 +19,14 @@ const (
 	GUESS_VALIDITY_THRESHOLD = 85
 )
 
+type GuessResult struct {
+	Title   bool
+	Artists map[string]bool
+}
+
 type Player struct {
-	Id string
+	Id      string
+	Guesses map[string]*GuessResult
 }
 
 // Contains all active rooms on the server. For now we will keep all rooms in memory
@@ -31,20 +37,23 @@ type Room struct {
 	Playlist     Playlist
 	PlayedTracks []Track
 	CurrentTrack chan Track
-	Players      map[string]Player
+	Players      map[string]*Player
 }
 
+// Create a new Room with a random uuid as id
+// @param playlist: The playlist to play in the room
 func NewRoom(playlist Playlist) *Room {
 	return NewRoomWithId(uuid.New().String(), playlist)
 }
 
+// Create a new Room with the specified id
 func NewRoomWithId(id string, playlist Playlist) *Room {
 	newRoom := &Room{
 		Id:           id,
 		Playlist:     playlist,
 		PlayedTracks: make([]Track, 0, len(playlist.Tracks.Items)),
 		CurrentTrack: make(chan Track),
-		Players:      make(map[string]Player),
+		Players:      make(map[string]*Player),
 	}
 	Mansion = append(Mansion, newRoom)
 	return newRoom
@@ -74,13 +83,26 @@ func (r *Room) Launch() {
 			newTrack = playlistTracks[rand.Intn(len(playlistTracks))].Track
 		}
 
-		r.CurrentTrack <- newTrack
 		r.PlayedTracks = append(r.PlayedTracks, newTrack)
+
+		// Create a new set of results for each player in the room
+		for _, player := range r.Players {
+			newGuess := GuessResult{
+				Title:   false,
+				Artists: make(map[string]bool, len(newTrack.Artists)),
+			}
+			for _, artist := range newTrack.Artists {
+				newGuess.Artists[artist.Name] = false
+			}
+			player.Guesses[newTrack.Name] = &newGuess
+		}
+
+		r.CurrentTrack <- newTrack
 		time.Sleep(TRACK_DURATION)
 	}
 }
 
-func (r *Room) GuessResult(guess string) bool {
+func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 	currentTrack := r.PlayedTracks[len(r.PlayedTracks)-1]
 
 	normalizedGuess := utils.Normalize(guess)
@@ -92,14 +114,26 @@ func (r *Room) GuessResult(guess string) bool {
 
 	normalizedScore := 100 * (float32(max(guessLen, titleLen)) - float32(score)) / float32(max(guessLen, titleLen))
 
-	return normalizedScore >= GUESS_VALIDITY_THRESHOLD
+	player := r.Players[playerId]
+
+	oldGuessResult := player.Guesses[currentTrack.Name]
+
+	newGuessResult := GuessResult{
+		Title:   normalizedScore >= GUESS_VALIDITY_THRESHOLD || oldGuessResult.Title,
+		Artists: make(map[string]bool, len(currentTrack.Artists)),
+	}
+	for _, artist := range currentTrack.Artists {
+		newGuessResult.Artists[artist.Name] = oldGuessResult.Artists[artist.Name]
+	}
+
+	player.Guesses[currentTrack.Name] = &newGuessResult
+	return &newGuessResult
 }
 
 func (r *Room) AddPlayer(player Player) {
 	log.Infof("Player %s joined room %s", player.Id, r.Id)
 
-	id := uuid.New().String()
-	r.Players[id] = player
+	r.Players[player.Id] = &player
 }
 
 func (r *Room) RemovePlayer(id string) {

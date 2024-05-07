@@ -3,6 +3,7 @@ package routers
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -42,48 +43,32 @@ func RegisterPlayRoutes(app *fiber.App, spotify *services.SpotifyService) {
 		room := services.NewRoomWithId(id, playlist)
 
 		// Create a new player with the session Id
-		session := ctx.Locals("session").(string)
+		session := fiber.Locals[string](ctx, "session")
 		room.AddPlayer(services.Player{
-			Id: session,
+			Id:      session,
+			Guesses: make(map[string]*services.GuessResult),
 		})
 
 		return handlers.Render(&ctx, play.Playlist(id))
 	})
 
 	playRouter.Post("/:id/guess", func(ctx fiber.Ctx) error {
-		id := ctx.Params("id")
+		session := fiber.Locals[string](ctx, "session")
 
 		guess := new(Guess)
-
 		if err := ctx.Bind().Form(guess); err != nil {
 			return err
 		}
 
-		room, err := services.GetRoomById(id)
-		if err != nil {
-			return err
-		}
-		if room.GuessResult(guess.Guess) {
-			return ctx.SendString(fmt.Sprintf("%s is a correct guess!", guess.Guess))
-		}
+		room := ctx.Locals("room").(*services.Room)
 
-		return ctx.SendString(fmt.Sprintf("%s is an incorrect guess!", guess.Guess))
-	})
+		guessResult := room.GuessResult(session, guess.Guess)
+		return handlers.Render(&ctx, play.GuessResult(room.PlayedTracks[len(room.PlayedTracks)-1], *guessResult))
+	}, getRoomFromRequest)
 
 	playRouter.Get("/:id/events", func(c fiber.Ctx) error {
-		id := c.Params("id")
-		session := c.Locals("session").(string)
-
-		room, err := services.GetRoomById(id)
-		if err != nil {
-			return err
-		}
-
-		// Set headers
-		c.Set("Content-Type", "text/event-stream")
-		c.Set("Cache-Control", "no-cache")
-		c.Set("Connection", "keep-alive")
-		c.Set("Transfer-Encoding", "chunked")
+		session := fiber.Locals[string](c, "session")
+		room := fiber.Locals[*services.Room](c, "room")
 
 		go room.Launch()
 
@@ -109,5 +94,32 @@ func RegisterPlayRoutes(app *fiber.App, spotify *services.SpotifyService) {
 		}))
 
 		return nil
-	})
+	}, setSSEHeaders, getRoomFromRequest)
+}
+
+// Middleware used to set mandatory headers for SSE
+func setSSEHeaders(c fiber.Ctx) error {
+	c.Set("Content-Type", "text/event-stream")
+	c.Set("Cache-Control", "no-cache")
+	c.Set("Connection", "keep-alive")
+	c.Set("Transfer-Encoding", "chunked")
+
+	return c.Next()
+}
+
+// Middleware used to get the room from the request
+func getRoomFromRequest(c fiber.Ctx) error {
+	id := c.Params("id")
+
+	if id == "" {
+		return errors.New("Could not get room id")
+	}
+
+	room, err := services.GetRoomById(id)
+	if err != nil {
+		return err
+	}
+
+	fiber.Locals(c, "room", room)
+	return c.Next()
 }

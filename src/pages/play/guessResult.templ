@@ -1,0 +1,29 @@
+package play
+
+import "fmt"
+import "lcor.io/songs/src/services"
+
+templ GuessResult(track services.Track, guess services.GuessResult) {
+	<div class="flex flex-col">
+		<p>
+			Title:
+			if guess.Title {
+				<span class="text-green-500">{ track.Name }</span>
+			} else {
+				<span class="text-red-500">Incorrect</span>
+			}
+		</p>
+		<ul>
+			for index, artist := range track.Artists {
+				<li>
+					Artist { fmt.Sprintf("%d", index) }: 
+					if guess.Artists[artist.Name] {
+						<span class="text-green-500">{ artist.Name }</span>
+					} else {
+						<span class="text-red-500">Incorrect</span>
+					}
+				</li>
+			}
+		</ul>
+	</div>
+}

@@ -38,21 +38,26 @@ func main() {
 
 	// Use session middleware
 	store := session.New(session.Config{
-		Expiration:     time.Hour * 24 * 30,
-		KeyLookup:      "cookie:songs_session",
-		KeyGenerator:   uuid.New().String,
-		CookieSecure:   true,
-		CookieHTTPOnly: true,
+		Expiration: time.Hour * 24 * 30,
+		KeyLookup:  "cookie:songs_session",
 	})
 	app.Use(func(c fiber.Ctx) error {
 		sess, err := store.Get(c)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).SendString("Error getting session")
 		}
+
+		// Assign or retrieve an id for the current session
+		id := sess.Get("id")
+		if id == nil {
+			id = uuid.New().String()
+			sess.Set("id", id)
+		}
+
 		if err := sess.Save(); err != nil {
 			return c.Status(fiber.StatusInternalServerError).SendString("Error setting session")
 		}
-		c.Locals("session", sess.ID())
+		fiber.Locals(c, "session", id)
 		return c.Next()
 	})
 
