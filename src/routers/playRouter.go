@@ -60,7 +60,7 @@ func RegisterPlayRoutes(app *fiber.App, spotify *services.SpotifyService) {
 			return err
 		}
 
-		room := ctx.Locals("room").(*services.Room)
+		room := fiber.Locals[*services.Room](ctx, "room")
 
 		guessResult := room.GuessResult(session, guess.Guess)
 		return handlers.Render(&ctx, play.GuessResult(room.PlayedTracks[len(room.PlayedTracks)-1], *guessResult))

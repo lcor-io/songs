@@ -5,6 +5,9 @@ import "lcor.io/songs/src/services"
 
 templ Audio(track services.Track) {
 	{ track.Name }
+	for _, artist := range track.Artists {
+		{ artist.Name }
+	}
 	<audio autoplay src={ track.PreviewUrl }></audio>
 	<div id="guess-results" hx-swap-oob="true">
 		<div class="flex flex-col">

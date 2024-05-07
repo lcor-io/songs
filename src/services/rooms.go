@@ -2,8 +2,10 @@ package services
 
 import (
 	"errors"
+	"maps"
 	"math/rand"
 	"slices"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -92,7 +94,7 @@ func (r *Room) Launch() {
 				Artists: make(map[string]bool, len(newTrack.Artists)),
 			}
 			for _, artist := range newTrack.Artists {
-				newGuess.Artists[artist.Name] = false
+				newGuess.Artists[utils.Normalize(artist.Name)] = false
 			}
 			player.Guesses[newTrack.Name] = &newGuess
 		}
@@ -105,25 +107,43 @@ func (r *Room) Launch() {
 func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 	currentTrack := r.PlayedTracks[len(r.PlayedTracks)-1]
 
+	// Normalize inputs for comparison
 	normalizedGuess := utils.Normalize(guess)
 	normalizedTitle := utils.Normalize(currentTrack.Name)
+	normalizedArtists := make([]string, len(currentTrack.Artists))
+	for i, artist := range currentTrack.Artists {
+		normalizedArtists[i] = utils.Normalize(artist.Name)
+	}
 
-	guessLen := utf8.RuneCountInString(normalizedGuess)
-	titleLen := utf8.RuneCountInString(normalizedTitle)
-	score := fuzzy.LevenshteinDistance(normalizedGuess, normalizedTitle)
-
-	normalizedScore := 100 * (float32(max(guessLen, titleLen)) - float32(score)) / float32(max(guessLen, titleLen))
+	// The player can guess the artists and the title at the same, so we need
+	// to check every possible combination of the input
+	guessCombinations := utils.Permutations(strings.Fields(normalizedGuess))
 
 	player := r.Players[playerId]
-
 	oldGuessResult := player.Guesses[currentTrack.Name]
 
+	// Match inputs against title and artists
 	newGuessResult := GuessResult{
-		Title:   normalizedScore >= GUESS_VALIDITY_THRESHOLD || oldGuessResult.Title,
-		Artists: make(map[string]bool, len(currentTrack.Artists)),
+		Title:   oldGuessResult.Title,
+		Artists: maps.Clone(oldGuessResult.Artists),
 	}
-	for _, artist := range currentTrack.Artists {
-		newGuessResult.Artists[artist.Name] = oldGuessResult.Artists[artist.Name]
+	for _, guess := range guessCombinations {
+		if !newGuessResult.Title {
+			guessLen := utf8.RuneCountInString(guess)
+			titleLen := utf8.RuneCountInString(normalizedTitle)
+			score := fuzzy.LevenshteinDistance(guess, normalizedTitle)
+			normalizedScore := 100 * (float32(max(guessLen, titleLen)) - float32(score)) / float32(max(guessLen, titleLen))
+			newGuessResult.Title = normalizedScore >= GUESS_VALIDITY_THRESHOLD
+		}
+		for _, artist := range normalizedArtists {
+			if !newGuessResult.Artists[artist] {
+				guessLen := utf8.RuneCountInString(guess)
+				artistLen := utf8.RuneCountInString(artist)
+				score := fuzzy.LevenshteinDistance(guess, artist)
+				normalizedScore := 100 * (float32(max(guessLen, artistLen)) - float32(score)) / float32(max(guessLen, artistLen))
+				newGuessResult.Artists[artist] = normalizedScore >= GUESS_VALIDITY_THRESHOLD
+			}
+		}
 	}
 
 	player.Guesses[currentTrack.Name] = &newGuessResult

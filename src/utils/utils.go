@@ -9,6 +9,9 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+// Normalize sanitizes Spotigy songs names by removing diacritics, special
+// characters and lowercasing the input. It also slice the stings to remove
+// unimportant characters.
 func Normalize(s string) string {
 	// Runs a transformer to remove all diacritics and lowercase the input
 	t := transform.Chain(norm.NFKD, runes.Remove(runes.In(unicode.Mn)), norm.NFC, runes.Map(unicode.ToLower))
@@ -24,4 +27,16 @@ func Normalize(s string) string {
 	normalized = strings.NewReplacer(" - ", "", " & ", "", ".", "", "!", "", "remix", "", "/", "", "edit", "", "from", "").Replace(normalized)
 
 	return normalized
+}
+
+func Permutations(input []string) []string {
+	result := make([]string, len(input)*(len(input)+1)/2)
+
+	for length := 1; length <= len(input); length++ {
+		for index := 0; index <= len(input)-length; index++ {
+			result = append(result, strings.Join(input[index:index+length], " "))
+		}
+	}
+
+	return result
 }

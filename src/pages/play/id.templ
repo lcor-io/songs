@@ -23,10 +23,11 @@ templ Playlist(id string) {
 						type="text"
 						name="guess"
 						autofocus
+						autocomplete="off"
 						placeholder="What's your take?"
-						class="w-full h-full max-w-96 px-3 border-2 border-teal-500 rounded-lg focus:outline-teal-500 focus:outline focus:outline-2 focus:outline-offset-1"
+						class="w-full h-full max-w-96 px-3 border-2 border-teal-500 rounded-lg focus:outline-teal-400 focus:outline focus:outline-2 focus:outline-offset-1"
 					/>
-					<button class="h-full bg-teal-500 w-28 font-bold rounded-lg p-2 text-white hover:shadow focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-teal-500" type="submit">Guess</button>
+					<button class="h-full bg-teal-500 w-28 font-bold rounded-lg p-2 text-white hover:shadow focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-teal-400" type="submit">Guess</button>
 				</div>
 			</form>
 			<div id="guess-results"></div>
