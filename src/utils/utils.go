@@ -30,7 +30,7 @@ func Normalize(s string) string {
 }
 
 func Permutations(input []string) []string {
-	result := make([]string, len(input)*(len(input)+1)/2)
+	result := make([]string, 0, len(input)*(len(input)+1)/2)
 
 	for length := 1; length <= len(input); length++ {
 		for index := 0; index <= len(input)-length; index++ {

@@ -76,5 +76,6 @@ func main() {
 
 	log.Fatal(app.Listen(":42069", fiber.ListenConfig{
 		EnablePrintRoutes: true,
+		EnablePrefork:     false,
 	}))
 }

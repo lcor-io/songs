@@ -3,7 +3,6 @@ package routers
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -40,7 +39,7 @@ func RegisterPlayRoutes(app *fiber.App, spotify *services.SpotifyService) {
 
 		// Create room with the specified playlist
 		playlist := spotify.GetPlaylist(id)
-		room := services.NewRoomWithId(id, playlist)
+		room := services.Mansion.NewRoomWithId(id, playlist)
 
 		// Create a new player with the session Id
 		session := fiber.Locals[string](ctx, "session")
@@ -55,46 +54,63 @@ func RegisterPlayRoutes(app *fiber.App, spotify *services.SpotifyService) {
 	playRouter.Post("/:id/guess", func(ctx fiber.Ctx) error {
 		session := fiber.Locals[string](ctx, "session")
 
+		room, err := services.Mansion.GetRoom(ctx.Params("id", ""))
+		if err != nil {
+			return err
+		}
+
 		guess := new(Guess)
 		if err := ctx.Bind().Form(guess); err != nil {
 			return err
 		}
 
-		room := fiber.Locals[*services.Room](ctx, "room")
-
 		guessResult := room.GuessResult(session, guess.Guess)
 		return handlers.Render(&ctx, play.GuessResult(room.PlayedTracks[len(room.PlayedTracks)-1], *guessResult))
-	}, getRoomFromRequest)
+	})
 
 	playRouter.Get("/:id/events", func(c fiber.Ctx) error {
 		session := fiber.Locals[string](c, "session")
-		room := fiber.Locals[*services.Room](c, "room")
+
+		room, err := services.Mansion.GetRoom(c.Params("id", ""))
+		if err != nil {
+			return err
+		}
 
 		go room.Launch()
 
 		// Create an http stream response
-		c.Status(fiber.StatusOK).Context().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
-			for track := range room.CurrentTrack {
+		baseContext := c.Status(fiber.StatusOK).Context()
+		baseContext.SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
+			for {
+				select {
+				case track := <-room.CurrentTrack:
 
-				// Create the HTML related to the event
-				htmlWriter := &strings.Builder{}
-				components.Audio(track).Render(context.Background(), htmlWriter)
-				msg := htmlWriter.String()
-				fmt.Fprintf(w, "data: %s\n\n", msg)
+					htmlWriter := &strings.Builder{}
+					components.Audio(track).Render(context.Background(), htmlWriter)
+					msg := htmlWriter.String()
+					if _, err := fmt.Fprintf(w, "data: %s\n\n", msg); err != nil {
+						log.Infof("Error  while flushing: %v. Closing the connection.\n", err)
+						room.RemovePlayer(session)
+						return
+					}
 
-				// Send the event to the client
-				err := w.Flush()
-				log.Info("Sending event to client")
-				if err != nil {
-					log.Infof("Error  while flushing: %v. Closing the connection.\n", err)
+					err := w.Flush()
+					if err != nil {
+						log.Infof("Error  while flushing: %v. Closing the connection.\n", err)
+						room.RemovePlayer(session)
+						return
+					}
+
+				case <-baseContext.Done():
+					log.Info("Client disconnected, closing connection")
 					room.RemovePlayer(session)
-					break
+					return
 				}
 			}
 		}))
 
 		return nil
-	}, setSSEHeaders, getRoomFromRequest)
+	}, setSSEHeaders)
 }
 
 // Middleware used to set mandatory headers for SSE
@@ -104,22 +120,5 @@ func setSSEHeaders(c fiber.Ctx) error {
 	c.Set("Connection", "keep-alive")
 	c.Set("Transfer-Encoding", "chunked")
 
-	return c.Next()
-}
-
-// Middleware used to get the room from the request
-func getRoomFromRequest(c fiber.Ctx) error {
-	id := c.Params("id")
-
-	if id == "" {
-		return errors.New("Could not get room id")
-	}
-
-	room, err := services.GetRoomById(id)
-	if err != nil {
-		return err
-	}
-
-	fiber.Locals(c, "room", room)
 	return c.Next()
 }

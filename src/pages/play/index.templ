@@ -7,7 +7,7 @@ templ Play() {
 		<main hx-boost="true" class="flex flex-row w-full">
 			<div hx-get="/play/featured" hx-trigger="revealed every 60s" class="w-full">
 				<h1 class="mb-4 text-3xl">Featured Playlists</h1>
-				<div class="w-full grid place-items-center grid-flow-row gap-4 grid-cols-4">
+				<div class="w-full grid place-items-center gap-4 grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
 					for range [9]int{} {
 						<div class="w-[300px] h-[300px] px-4 shadow rounded-lg bg-slate-500 animate-pulse"></div>
 					}

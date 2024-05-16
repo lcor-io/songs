@@ -1,29 +1,37 @@
 package services
 
 import (
-	"errors"
 	"maps"
 	"math/rand"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
 	"github.com/gofiber/fiber/v3/log"
-	"github.com/google/uuid"
 	"github.com/lithammer/fuzzysearch/fuzzy"
 
 	"lcor.io/songs/src/utils"
 )
 
 const (
-	TRACK_DURATION           = 10 * time.Second
+	TRACK_DURATION           = 30 * time.Second
 	GUESS_VALIDITY_THRESHOLD = 85
+	GUESS_PARTIAL_THRESHOLD  = 70
+)
+
+type ResultValidity uint8
+
+const (
+	Invalid ResultValidity = iota
+	Partial
+	Valid
 )
 
 type GuessResult struct {
-	Title   bool
-	Artists map[string]bool
+	Title   ResultValidity
+	Artists map[string]ResultValidity
 }
 
 type Player struct {
@@ -31,51 +39,28 @@ type Player struct {
 	Guesses map[string]*GuessResult
 }
 
-// Contains all active rooms on the server. For now we will keep all rooms in memory
-var Mansion = []*Room{}
-
 type Room struct {
 	Id           string
 	Playlist     Playlist
 	PlayedTracks []Track
 	CurrentTrack chan Track
 	Players      map[string]*Player
-}
-
-// Create a new Room with a random uuid as id
-// @param playlist: The playlist to play in the room
-func NewRoom(playlist Playlist) *Room {
-	return NewRoomWithId(uuid.New().String(), playlist)
-}
-
-// Create a new Room with the specified id
-func NewRoomWithId(id string, playlist Playlist) *Room {
-	newRoom := &Room{
-		Id:           id,
-		Playlist:     playlist,
-		PlayedTracks: make([]Track, 0, len(playlist.Tracks.Items)),
-		CurrentTrack: make(chan Track),
-		Players:      make(map[string]*Player),
-	}
-	Mansion = append(Mansion, newRoom)
-	return newRoom
-}
-
-func GetRoomById(id string) (*Room, error) {
-	for _, room := range Mansion {
-		if room.Id == id {
-			return room, nil
-		}
-	}
-	return nil, errors.New("Room not found")
+	done         chan bool
+	ticker       *time.Ticker
+	mu           sync.Mutex
 }
 
 func (r *Room) Launch() {
-	defer close(r.CurrentTrack)
+	defer func() {
+		for _, player := range r.Players {
+			r.RemovePlayer(player.Id)
+		}
+	}()
 
 	playlistTracks := r.Playlist.Tracks.Items
+	r.ticker = time.NewTicker(TRACK_DURATION)
 
-	for i := 0; i < len(playlistTracks); i++ {
+	processNewTrack := func() {
 		// Select a track random track from playlist not in already played tracks
 		newTrack := playlistTracks[rand.Intn(len(playlistTracks))].Track
 		newTrackAlreadyPlayed := slices.ContainsFunc(r.PlayedTracks, func(t Track) bool {
@@ -83,6 +68,9 @@ func (r *Room) Launch() {
 		})
 		for newTrackAlreadyPlayed {
 			newTrack = playlistTracks[rand.Intn(len(playlistTracks))].Track
+			newTrackAlreadyPlayed = slices.ContainsFunc(r.PlayedTracks, func(t Track) bool {
+				return t.Name == newTrack.Name
+			})
 		}
 
 		r.PlayedTracks = append(r.PlayedTracks, newTrack)
@@ -90,17 +78,29 @@ func (r *Room) Launch() {
 		// Create a new set of results for each player in the room
 		for _, player := range r.Players {
 			newGuess := GuessResult{
-				Title:   false,
-				Artists: make(map[string]bool, len(newTrack.Artists)),
+				Title:   Invalid,
+				Artists: make(map[string]ResultValidity, len(newTrack.Artists)),
 			}
 			for _, artist := range newTrack.Artists {
-				newGuess.Artists[utils.Normalize(artist.Name)] = false
+				newGuess.Artists[utils.Normalize(artist.Name)] = Invalid
 			}
 			player.Guesses[newTrack.Name] = &newGuess
 		}
 
 		r.CurrentTrack <- newTrack
-		time.Sleep(TRACK_DURATION)
+	}
+
+	for i := 0; i < len(playlistTracks); i++ {
+		if i == 0 {
+			processNewTrack()
+			continue
+		}
+		select {
+		case <-r.done:
+			return
+		case <-r.ticker.C:
+			processNewTrack()
+		}
 	}
 }
 
@@ -128,20 +128,32 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 		Artists: maps.Clone(oldGuessResult.Artists),
 	}
 	for _, guess := range guessCombinations {
-		if !newGuessResult.Title {
+		if newGuessResult.Title != Valid {
 			guessLen := utf8.RuneCountInString(guess)
 			titleLen := utf8.RuneCountInString(normalizedTitle)
 			score := fuzzy.LevenshteinDistance(guess, normalizedTitle)
 			normalizedScore := 100 * (float32(max(guessLen, titleLen)) - float32(score)) / float32(max(guessLen, titleLen))
-			newGuessResult.Title = normalizedScore >= GUESS_VALIDITY_THRESHOLD
+			if normalizedScore >= GUESS_VALIDITY_THRESHOLD {
+				newGuessResult.Title = Valid
+			} else if normalizedScore >= GUESS_PARTIAL_THRESHOLD {
+				newGuessResult.Title = Partial
+			} else {
+				newGuessResult.Title = Invalid
+			}
 		}
 		for _, artist := range normalizedArtists {
-			if !newGuessResult.Artists[artist] {
+			if newGuessResult.Artists[artist] != Valid {
 				guessLen := utf8.RuneCountInString(guess)
 				artistLen := utf8.RuneCountInString(artist)
 				score := fuzzy.LevenshteinDistance(guess, artist)
 				normalizedScore := 100 * (float32(max(guessLen, artistLen)) - float32(score)) / float32(max(guessLen, artistLen))
-				newGuessResult.Artists[artist] = normalizedScore >= GUESS_VALIDITY_THRESHOLD
+				if normalizedScore >= GUESS_VALIDITY_THRESHOLD {
+					newGuessResult.Artists[artist] = Valid
+				} else if normalizedScore >= GUESS_PARTIAL_THRESHOLD {
+					newGuessResult.Artists[artist] = Partial
+				} else {
+					newGuessResult.Artists[artist] = Invalid
+				}
 			}
 		}
 	}
@@ -152,6 +164,8 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 
 func (r *Room) AddPlayer(player Player) {
 	log.Infof("Player %s joined room %s", player.Id, r.Id)
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
 	r.Players[player.Id] = &player
 }
@@ -159,15 +173,16 @@ func (r *Room) AddPlayer(player Player) {
 func (r *Room) RemovePlayer(id string) {
 	log.Infof("Player %s leaved room %s", id, r.Id)
 
+	r.mu.Lock()
 	delete(r.Players, id)
+	r.mu.Unlock()
 
 	// The room is empty, remove it
 	if len(r.Players) == 0 {
 		log.Infof("Room %s is empty, removing it", r.Id)
-		close(r.CurrentTrack)
-		Mansion = slices.DeleteFunc(Mansion, func(room *Room) bool {
-			return room.Id == r.Id
-		})
+		r.ticker.Stop()
+		r.done <- true
+		Mansion.RemoveRoom(r.Id)
 		r = nil
 	}
 }

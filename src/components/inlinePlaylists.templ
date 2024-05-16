@@ -5,7 +5,7 @@ import "lcor.io/songs/src/services"
 
 templ InlinePlaylists(title string, playlists services.SpotifyPlaylistResult) {
 	<h1 class="mb-4 text-3xl">{ title }</h1>
-	<div class="w-full grid place-items-center grid-rows-3 gap-4 grid-flow-col">
+	<div class="w-full grid place-items-center gap-4 grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
 		for _, item := range playlists.Playlists.Items {
 			@PlaylistCover(item)
 		}
