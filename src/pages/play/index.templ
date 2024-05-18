@@ -6,7 +6,7 @@ templ Play() {
 	@components.Index("Play the game") {
 		<main hx-boost="true" class="flex flex-col w-full">
 			<h1 class="mb-4 text-3xl">Active rooms</h1>
-			<div hx-get="play/rooms" hx-trigger="revealed every 60s" class="w-full grid place-items-center gap-4 grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+			<div hx-get="play/rooms" hx-trigger="revealed, every 60s" class="w-full grid place-items-center gap-4 grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
 				for range [9]int{} {
 					<div class="w-[300px] h-[300px] px-4 shadow rounded-lg bg-slate-500 animate-pulse"></div>
 				}
