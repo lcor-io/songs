@@ -14,7 +14,6 @@ import (
 	"lcor.io/songs/src/utils"
 
 	base "lcor.io/songs/src/components"
-	playlist "lcor.io/songs/src/components/playlist"
 
 	playIndex "lcor.io/songs/src/pages/play"
 	playPage "lcor.io/songs/src/pages/play/id"
@@ -24,31 +23,24 @@ type Guess struct {
 	Guess string `form:"guess"`
 }
 
-func RegisterPlayRoutes(app *fiber.App, spotify *services.SpotifyService) {
-	playRouter := app.Group("/play")
-
-	playRouter.Get("/", func(ctx fiber.Ctx) error {
+func RegisterPlayRoutes(router fiber.Router) {
+	router.Get("/", func(ctx fiber.Ctx) error {
 		return utils.TemplRender(&ctx, playIndex.Play())
 	})
 
-	playRouter.Get("/featured", func(ctx fiber.Ctx) error {
-		playlists := spotify.GetFeaturedPlaylist()
-		ctx.Set("Cache-Control", "max-age=60, stale-while-revalidate=3600")
-		return utils.TemplRender(&ctx, playlist.InlinePlaylists("Featured Playlists", playlists))
-	})
-
 	// Endpoint to get all active rooms
-	playRouter.Get("/rooms", func(ctx fiber.Ctx) error {
+	router.Get("/rooms", func(ctx fiber.Ctx) error {
 		rooms := services.Mansion.GetAll()
 		return utils.TemplRender(&ctx, playPage.ActiveRooms(rooms))
 	})
 
-	playRouter.Get("/:id", func(ctx fiber.Ctx) error {
+	router.Get("/:id", func(ctx fiber.Ctx) error {
 		id := ctx.Params("id")
 
-		// Create room with the specified playlist
-		playlist := spotify.GetPlaylist(id)
-		room := services.Mansion.NewRoomWithId(id, playlist)
+		room, err := services.Mansion.GetRoom(id)
+		if err != nil {
+			return err
+		}
 
 		// Create a new player with the session Id
 		session := fiber.Locals[string](ctx, "session")
@@ -60,7 +52,7 @@ func RegisterPlayRoutes(app *fiber.App, spotify *services.SpotifyService) {
 		return utils.TemplRender(&ctx, playPage.Playlist(id))
 	})
 
-	playRouter.Post("/:id/guess", func(ctx fiber.Ctx) error {
+	router.Post("/:id/guess", func(ctx fiber.Ctx) error {
 		session := fiber.Locals[string](ctx, "session")
 
 		room, err := services.Mansion.GetRoom(ctx.Params("id", ""))
@@ -77,7 +69,7 @@ func RegisterPlayRoutes(app *fiber.App, spotify *services.SpotifyService) {
 		return utils.TemplRender(&ctx, playPage.GuessResult(room.PlayedTracks[len(room.PlayedTracks)-1], *guessResult))
 	})
 
-	playRouter.Get("/:id/events", func(c fiber.Ctx) error {
+	router.Get("/:id/events", func(c fiber.Ctx) error {
 		session := fiber.Locals[string](c, "session")
 
 		room, err := services.Mansion.GetRoom(c.Params("id", ""))

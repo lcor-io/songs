@@ -1,0 +1,16 @@
+package pages
+
+import "lcor.io/songs/src/components"
+
+templ Create() {
+	@components.Index("Create new Room") {
+		<main hx-boost="true" class="flex flex-col w-full">
+			<h1 class="mb-4 text-3xl">Featured playlists</h1>
+			<div hx-get="/create/featured" hx-trigger="revealed" hx-swap="outerHTML" class="w-full grid place-items-center gap-4 grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+				for range [9]int{} {
+					<div class="w-[300px] h-[300px] px-4 shadow rounded-lg bg-slate-500 animate-pulse"></div>
+				}
+			</div>
+		</main>
+	}
+}
