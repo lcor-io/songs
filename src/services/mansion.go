@@ -14,6 +14,10 @@ type mansion struct {
 
 var Mansion = mansion{rooms: map[string]*Room{}}
 
+func (m *mansion) GetAll() map[string]*Room {
+	return m.rooms
+}
+
 func (m *mansion) NewRoom(playlist Playlist) *Room {
 	return m.NewRoomWithId(uuid.New().String(), playlist)
 }

@@ -10,11 +10,14 @@ import (
 	"github.com/gofiber/fiber/v3/log"
 	"github.com/valyala/fasthttp"
 
-	"lcor.io/songs/src/components"
-	"lcor.io/songs/src/handlers"
 	"lcor.io/songs/src/services"
+	"lcor.io/songs/src/utils"
 
-	"lcor.io/songs/src/pages/play"
+	base "lcor.io/songs/src/components"
+	playlist "lcor.io/songs/src/components/playlist"
+
+	playIndex "lcor.io/songs/src/pages/play"
+	playPage "lcor.io/songs/src/pages/play/id"
 )
 
 type Guess struct {
@@ -25,13 +28,19 @@ func RegisterPlayRoutes(app *fiber.App, spotify *services.SpotifyService) {
 	playRouter := app.Group("/play")
 
 	playRouter.Get("/", func(ctx fiber.Ctx) error {
-		return handlers.Render(&ctx, play.Play())
+		return utils.TemplRender(&ctx, playIndex.Play())
 	})
 
 	playRouter.Get("/featured", func(ctx fiber.Ctx) error {
 		playlists := spotify.GetFeaturedPlaylist()
 		ctx.Set("Cache-Control", "max-age=60, stale-while-revalidate=3600")
-		return handlers.Render(&ctx, components.InlinePlaylists("Featured Playlists", playlists))
+		return utils.TemplRender(&ctx, playlist.InlinePlaylists("Featured Playlists", playlists))
+	})
+
+	// Endpoint to get all active rooms
+	playRouter.Get("/rooms", func(ctx fiber.Ctx) error {
+		rooms := services.Mansion.GetAll()
+		return utils.TemplRender(&ctx, playPage.ActiveRooms(rooms))
 	})
 
 	playRouter.Get("/:id", func(ctx fiber.Ctx) error {
@@ -48,7 +57,7 @@ func RegisterPlayRoutes(app *fiber.App, spotify *services.SpotifyService) {
 			Guesses: make(map[string]*services.GuessResult),
 		})
 
-		return handlers.Render(&ctx, play.Playlist(id))
+		return utils.TemplRender(&ctx, playPage.Playlist(id))
 	})
 
 	playRouter.Post("/:id/guess", func(ctx fiber.Ctx) error {
@@ -65,7 +74,7 @@ func RegisterPlayRoutes(app *fiber.App, spotify *services.SpotifyService) {
 		}
 
 		guessResult := room.GuessResult(session, guess.Guess)
-		return handlers.Render(&ctx, play.GuessResult(room.PlayedTracks[len(room.PlayedTracks)-1], *guessResult))
+		return utils.TemplRender(&ctx, playPage.GuessResult(room.PlayedTracks[len(room.PlayedTracks)-1], *guessResult))
 	})
 
 	playRouter.Get("/:id/events", func(c fiber.Ctx) error {
@@ -86,7 +95,7 @@ func RegisterPlayRoutes(app *fiber.App, spotify *services.SpotifyService) {
 				case track := <-room.CurrentTrack:
 
 					htmlWriter := &strings.Builder{}
-					components.Audio(track).Render(context.Background(), htmlWriter)
+					base.Audio(track).Render(context.Background(), htmlWriter)
 					msg := htmlWriter.String()
 					if _, err := fmt.Fprintf(w, "data: %s\n\n", msg); err != nil {
 						log.Infof("Error  while flushing: %v. Closing the connection.\n", err)

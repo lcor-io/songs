@@ -1,0 +1,12 @@
+package pages
+
+import (
+	"lcor.io/songs/src/services"
+	"lcor.io/songs/src/components/playlist"
+)
+
+templ ActiveRooms(rooms map[string]*services.Room) {
+	for _, room := range rooms {
+		@components.PlaylistCover(room.Playlist)
+	}
+}

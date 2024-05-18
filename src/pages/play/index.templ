@@ -1,18 +1,17 @@
-package play
+package pages
 
-import "lcor.io/songs/src/templates"
+import "lcor.io/songs/src/components"
 
 templ Play() {
-	@templates.Index("Play the game") {
-		<main hx-boost="true" class="flex flex-row w-full">
-			<div hx-get="/play/featured" hx-trigger="revealed every 60s" class="w-full">
-				<h1 class="mb-4 text-3xl">Featured Playlists</h1>
-				<div class="w-full grid place-items-center gap-4 grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-					for range [9]int{} {
-						<div class="w-[300px] h-[300px] px-4 shadow rounded-lg bg-slate-500 animate-pulse"></div>
-					}
-				</div>
+	@components.Index("Play the game") {
+		<main hx-boost="true" class="flex flex-col w-full">
+			<h1 class="mb-4 text-3xl">Active rooms</h1>
+			<div hx-get="play/rooms" hx-trigger="revealed every 60s" class="w-full grid place-items-center gap-4 grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+				for range [9]int{} {
+					<div class="w-[300px] h-[300px] px-4 shadow rounded-lg bg-slate-500 animate-pulse"></div>
+				}
 			</div>
+			<a href="#" class="h-full bg-teal-500 w-fit max-w-56 font-bold rounded-lg p-2 text-white hover:shadow focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-teal-400">Nouvelle partie</a>
 		</main>
 	}
 }

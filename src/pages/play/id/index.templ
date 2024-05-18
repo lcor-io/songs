@@ -1,10 +1,14 @@
-package play
+package pages
 
-import "lcor.io/songs/src/templates"
 import "fmt"
 
+import (
+	"lcor.io/songs/src/components"
+	ui "lcor.io/songs/src/components/ui"
+)
+
 templ Playlist(id string) {
-	@templates.Index("Play") {
+	@components.Index("Play") {
 		<main>
 			<a href="/play">Back</a>
 			<div hx-ext="sse" sse-connect={ string(templ.URL(fmt.Sprintf("/play/%s/events", id))) } sse-swap="message">
@@ -28,7 +32,9 @@ templ Playlist(id string) {
 						placeholder="What's your take?"
 						class="w-full h-full max-w-96 px-3 border-2 border-teal-500 rounded-lg focus:outline-teal-400 focus:outline focus:outline-2 focus:outline-offset-1"
 					/>
-					<button class="h-full bg-teal-500 w-28 font-bold rounded-lg p-2 text-white hover:shadow focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-teal-400" type="submit">Guess</button>
+					@ui.Button(ui.ButtonProps{Type: "submit"}) {
+						Guess
+					}
 				</div>
 			</form>
 			<div id="guess-results"></div>

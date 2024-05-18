@@ -1,0 +1,16 @@
+package components;
+
+type ButtonProps struct {
+	Type string
+}
+
+var DefaultButtonProps = ButtonProps{Type: "button"}
+
+templ Button(props ButtonProps) {
+	<button
+		class="h-full bg-teal-500 w-28 font-bold rounded-lg p-2 text-white hover:shadow focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-teal-400"
+		type={ props.Type }
+	>
+		{ children... }
+	</button>
+}
