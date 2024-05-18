@@ -24,7 +24,7 @@ func Normalize(s string) string {
 	}
 
 	// Remove forbidden characters
-	normalized = strings.NewReplacer(" - ", "", " & ", "", ".", "", "!", "", "remix", "", "/", "", "edit", "", "from", "").Replace(normalized)
+	normalized = strings.NewReplacer(" - ", " ", " & ", " ", ".", " ", "!", " ", "remix", " ", "/", " ", "edit", " ", "from", " ").Replace(normalized)
 
 	return normalized
 }
