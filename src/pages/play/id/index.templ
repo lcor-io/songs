@@ -12,9 +12,7 @@ templ Playlist(room *services.Room) {
 	@components.Index("Play") {
 		<main>
 			<a href="/play">Back</a>
-			<div hx-ext="sse" sse-connect={ string(templ.URL(fmt.Sprintf("/play/%s/events", room.Id))) } sse-swap="message">
-				Content should be replaced by SSE message
-			</div>
+			<div hx-ext="sse" sse-connect={ string(templ.URL(fmt.Sprintf("/play/%s/events", room.Id))) } sse-swap="message"></div>
 			<form
 				id="guess-form"
 				method="post"
@@ -38,14 +36,15 @@ templ Playlist(room *services.Room) {
 					}
 				</div>
 			</form>
+			<div id="guess-results"></div>
 			<div class="flex flex-row">
-				<div id="previous-tracks">
+				<div id="previous-tracks" class="ml-5">
 					if len(room.PlayedTracks) > 1 {
 						for idx, track := range room.PlayedTracks {
 							if idx != len(room.PlayedTracks) - 1 {
-								<div class="flex flex-row cursor-pointer">
+								<div class="flex flex-row cursor-pointer gap-2 mb-5">
 									if len(track.Album.Images) > 0 {
-										<img src={ track.Album.Images[0].Url } alt={ track.Album.Name } class="w-16 h-16"/>
+										<img src={ track.Album.Images[0].Url } alt={ track.Album.Name } class="w-16 h-16 rounded"/>
 									}
 									<div class="flex flex-col">
 										<span>{ track.Name }</span>
@@ -63,7 +62,7 @@ templ Playlist(room *services.Room) {
 						}
 					}
 				</div>
-				<div id="guess-results"></div>
+				<div id="players-score" hx-ext="sse" sse-connect={ string(templ.URL(fmt.Sprintf("/play/%s/scores", room.Id))) } sse-swap="message"></div>
 			</div>
 		</main>
 	}

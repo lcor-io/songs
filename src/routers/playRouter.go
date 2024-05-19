@@ -44,13 +44,46 @@ func RegisterPlayRoutes(router fiber.Router) {
 
 		// Create a new player with the session Id
 		session := fiber.Locals[string](ctx, "session")
-		room.AddPlayer(services.Player{
+		room.AddPlayer(services.RoomPlayer{
 			Id:      session,
 			Guesses: make(map[string]*services.GuessResult),
 		})
 
 		return utils.TemplRender(&ctx, playPage.Playlist(room))
 	})
+
+	router.Get("/:id/scores", func(ctx fiber.Ctx) error {
+		room, err := services.Mansion.GetRoom(ctx.Params("id", ""))
+		if err != nil {
+			return err
+		}
+
+		baseContext := ctx.Status(fiber.StatusOK).Context()
+		baseContext.SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
+			for {
+				select {
+				case scores := <-room.Scores:
+
+					htmlWriter := &strings.Builder{}
+					base.Scores(scores).Render(context.Background(), htmlWriter)
+					msg := htmlWriter.String()
+					if _, err := fmt.Fprintf(w, "data: %s\n\n", msg); err != nil {
+						return
+					}
+
+					err := w.Flush()
+					if err != nil {
+						return
+					}
+
+				case <-baseContext.Done():
+					return
+				}
+			}
+		}))
+
+		return nil
+	}, setSSEHeaders)
 
 	router.Post("/:id/guess", func(ctx fiber.Ctx) error {
 		session := fiber.Locals[string](ctx, "session")

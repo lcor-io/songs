@@ -7,11 +7,9 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"unicode/utf8"
 
 	"github.com/gofiber/fiber/v3/log"
 	"github.com/google/uuid"
-	"github.com/lithammer/fuzzysearch/fuzzy"
 
 	"lcor.io/songs/src/utils"
 )
@@ -33,11 +31,14 @@ const (
 type GuessResult struct {
 	Title   ResultValidity
 	Artists map[string]ResultValidity
+	score   float32
 }
 
-type Player struct {
-	Id      string
-	Guesses map[string]*GuessResult
+type RoomPlayer struct {
+	Id       string
+	PlayerId string
+	Guesses  map[string]*GuessResult
+	score    float32
 }
 
 type Room struct {
@@ -45,10 +46,14 @@ type Room struct {
 	Playlist     *Playlist
 	PlayedTracks []Track
 	CurrentTrack chan Track
-	Players      map[string]*Player
-	done         chan bool
-	ticker       *time.Ticker
-	mu           sync.Mutex
+	Players      map[string]*RoomPlayer
+	Scores       chan []struct {
+		Id    string
+		Score float32
+	}
+	done   chan bool
+	ticker *time.Ticker
+	mu     sync.Mutex
 }
 
 func NewRoom(playlist *Playlist) *Room {
@@ -57,8 +62,12 @@ func NewRoom(playlist *Playlist) *Room {
 		Playlist:     playlist,
 		PlayedTracks: make([]Track, 0, len(playlist.Tracks.Items)),
 		CurrentTrack: make(chan Track, len(playlist.Tracks.Items)),
-		Players:      make(map[string]*Player),
-		done:         make(chan bool),
+		Players:      make(map[string]*RoomPlayer),
+		Scores: make(chan []struct {
+			Id    string
+			Score float32
+		}),
+		done: make(chan bool),
 	}
 }
 
@@ -137,43 +146,76 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 	newGuessResult := GuessResult{
 		Title:   oldGuessResult.Title,
 		Artists: maps.Clone(oldGuessResult.Artists),
+		score:   oldGuessResult.score,
 	}
+	var newGuessScore float32 = 0
 	for _, guess := range guessCombinations {
 		if newGuessResult.Title != Valid {
-			guessLen := utf8.RuneCountInString(guess)
-			titleLen := utf8.RuneCountInString(normalizedTitle)
-			score := fuzzy.LevenshteinDistance(guess, normalizedTitle)
-			normalizedScore := 100 * (float32(max(guessLen, titleLen)) - float32(score)) / float32(max(guessLen, titleLen))
-			if normalizedScore >= GUESS_VALIDITY_THRESHOLD {
+			score := utils.GetScore(guess, normalizedTitle)
+			switch {
+			case score >= GUESS_VALIDITY_THRESHOLD:
 				newGuessResult.Title = Valid
-			} else if normalizedScore >= GUESS_PARTIAL_THRESHOLD {
+				newGuessScore += 1
+			case score >= GUESS_PARTIAL_THRESHOLD:
 				newGuessResult.Title = Partial
-			} else {
+				newGuessScore += score
+			default:
 				newGuessResult.Title = Invalid
 			}
+		} else {
+			newGuessScore += 1
 		}
 		for _, artist := range normalizedArtists {
 			if newGuessResult.Artists[artist] != Valid {
-				guessLen := utf8.RuneCountInString(guess)
-				artistLen := utf8.RuneCountInString(artist)
-				score := fuzzy.LevenshteinDistance(guess, artist)
-				normalizedScore := 100 * (float32(max(guessLen, artistLen)) - float32(score)) / float32(max(guessLen, artistLen))
-				if normalizedScore >= GUESS_VALIDITY_THRESHOLD {
+				score := utils.GetScore(guess, artist)
+				switch {
+				case score >= GUESS_VALIDITY_THRESHOLD:
 					newGuessResult.Artists[artist] = Valid
-				} else if normalizedScore >= GUESS_PARTIAL_THRESHOLD {
+					newGuessScore += 1
+				case score >= GUESS_PARTIAL_THRESHOLD:
 					newGuessResult.Artists[artist] = Partial
-				} else {
+					newGuessScore += score
+				default:
 					newGuessResult.Artists[artist] = Invalid
 				}
+			} else {
+				newGuessScore += 1
 			}
 		}
+
+		if newGuessScore > oldGuessResult.score {
+			newGuessResult.score = newGuessScore
+			player.score += (newGuessScore - oldGuessResult.score)
+		}
+	}
+
+	// Update the score for all players in the room
+	if newGuessResult.score > oldGuessResult.score {
+		scores := make([]struct {
+			Id    string
+			Score float32
+		}, len(r.Players))
+		for _, player := range r.Players {
+			scores = append(scores, struct {
+				Id    string
+				Score float32
+			}{player.Id, player.score})
+		}
+		slices.SortStableFunc(scores, func(a, b struct {
+			Id    string
+			Score float32
+		},
+		) int {
+			return int(a.Score - b.Score)
+		})
+		r.Scores <- scores
 	}
 
 	player.Guesses[currentTrack.Name] = &newGuessResult
 	return &newGuessResult
 }
 
-func (r *Room) AddPlayer(player Player) {
+func (r *Room) AddPlayer(player RoomPlayer) {
 	log.Infof("Player %s joined room %s", player.Id, r.Id)
 	r.mu.Lock()
 	defer r.mu.Unlock()

@@ -3,7 +3,6 @@ package services
 import (
 	"log"
 	"net/http"
-	"slices"
 	"strings"
 
 	"github.com/go-resty/resty/v2"
