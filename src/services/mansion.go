@@ -3,8 +3,6 @@ package services
 import (
 	"errors"
 	"sync"
-
-	"github.com/google/uuid"
 )
 
 type mansion struct {
@@ -18,25 +16,13 @@ func (m *mansion) GetAll() map[string]*Room {
 	return m.rooms
 }
 
-func (m *mansion) NewRoom(playlist Playlist) *Room {
-	return m.NewRoomWithId(uuid.New().String(), playlist)
-}
-
-func (m *mansion) NewRoomWithId(id string, playlist Playlist) *Room {
+func (m *mansion) NewRoom(playlist *Playlist) *Room {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	newRoom := Room{
-		Id:           id,
-		Playlist:     playlist,
-		PlayedTracks: make([]Track, 0, len(playlist.Tracks.Items)),
-		CurrentTrack: make(chan Track, len(playlist.Tracks.Items)),
-		Players:      make(map[string]*Player),
-		done:         make(chan bool),
-	}
-
-	m.rooms[id] = &newRoom
-	return &newRoom
+	newRoom := NewRoom(playlist)
+	m.rooms[newRoom.Id] = newRoom
+	return newRoom
 }
 
 func (m *mansion) GetRoom(id string) (*Room, error) {

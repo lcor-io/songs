@@ -5,21 +5,22 @@ import "fmt"
 import (
 	"lcor.io/songs/src/components"
 	ui "lcor.io/songs/src/components/ui"
+	"lcor.io/songs/src/services"
 )
 
-templ Playlist(id string) {
+templ Playlist(room *services.Room) {
 	@components.Index("Play") {
 		<main>
 			<a href="/play">Back</a>
-			<div hx-ext="sse" sse-connect={ string(templ.URL(fmt.Sprintf("/play/%s/events", id))) } sse-swap="message">
+			<div hx-ext="sse" sse-connect={ string(templ.URL(fmt.Sprintf("/play/%s/events", room.Id))) } sse-swap="message">
 				Content should be replaced by SSE message
 			</div>
 			<form
 				id="guess-form"
 				method="post"
 				hx-target="#guess-results"
-				action={ templ.URL(fmt.Sprintf("/play/%s/guess", id)) }
-				hx-post={ string(templ.URL(fmt.Sprintf("/play/%s/guess", id))) }
+				action={ templ.URL(fmt.Sprintf("/play/%s/guess", room.Id)) }
+				hx-post={ string(templ.URL(fmt.Sprintf("/play/%s/guess", room.Id))) }
 				class="w-full"
 			>
 				<div class="h-14 flex flex-row gap-3 justify-center items-center whitespace-nowrap">
@@ -37,7 +38,33 @@ templ Playlist(id string) {
 					}
 				</div>
 			</form>
-			<div id="guess-results"></div>
+			<div class="flex flex-row">
+				<div id="previous-tracks">
+					if len(room.PlayedTracks) > 1 {
+						for idx, track := range room.PlayedTracks {
+							if idx != len(room.PlayedTracks) - 1 {
+								<div class="flex flex-row cursor-pointer">
+									if len(track.Album.Images) > 0 {
+										<img src={ track.Album.Images[0].Url } alt={ track.Album.Name } class="w-16 h-16"/>
+									}
+									<div class="flex flex-col">
+										<span>{ track.Name }</span>
+										<span>
+											for idx, artist := range track.Artists {
+												{ artist.Name }
+												if idx < len(track.Artists) - 1 {
+													;
+												}
+											}
+										</span>
+									</div>
+								</div>
+							}
+						}
+					}
+				</div>
+				<div id="guess-results"></div>
+			</div>
 		</main>
 	}
 }

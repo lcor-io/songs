@@ -3,23 +3,46 @@ package components
 import "fmt"
 import "lcor.io/songs/src/services"
 
-templ Audio(track services.Track) {
-	{ track.Name }
-	for _, artist := range track.Artists {
-		{ artist.Name }
+templ Audio(room *services.Room, currentTrack services.Track) {
+	// Update audio
+	<audio autoplay src={ currentTrack.PreviewUrl }></audio>
+	// Update played tracks
+	if len(room.PlayedTracks) > 1 {
+		<div id="previous-tracks" hx-swap-oob="true">
+			for idx, track := range room.PlayedTracks {
+				if idx != len(room.PlayedTracks) - 1 {
+					<div class="flex flex-row cursor-pointer">
+						if len(track.Album.Images) > 0 {
+							<img src={ track.Album.Images[0].Url } alt={ track.Album.Name } class="w-16 h-16"/>
+						}
+						<div class="flex flex-col">
+							<span>{ track.Name }</span>
+							<span>
+								for idx, artist := range track.Artists {
+									{ artist.Name }
+									if idx < len(track.Artists) - 1 {
+										;
+									}
+								}
+							</span>
+						</div>
+					</div>
+				}
+			}
+		</div>
 	}
-	<audio autoplay src={ track.PreviewUrl }></audio>
+	// Initialized guess results panel
 	<div id="guess-results" hx-swap-oob="true">
 		<div class="flex flex-col">
 			<p>
 				Title:
-				<span class="text-red-500">Incorrect</span>
+				<span class="text-red-500">Not Found</span>
 			</p>
 			<ul>
-				for index := range track.Artists {
+				for index := range currentTrack.Artists {
 					<li>
-						Artist { fmt.Sprintf("%d", index) }: 
-						<span class="text-red-500">Incorrect</span>
+						Artist { fmt.Sprintf("%d", index + 1) }: 
+						<span class="text-red-500">Not Found</span>
 					</li>
 				}
 			</ul>

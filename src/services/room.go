@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gofiber/fiber/v3/log"
+	"github.com/google/uuid"
 	"github.com/lithammer/fuzzysearch/fuzzy"
 
 	"lcor.io/songs/src/utils"
@@ -41,13 +42,24 @@ type Player struct {
 
 type Room struct {
 	Id           string
-	Playlist     Playlist
+	Playlist     *Playlist
 	PlayedTracks []Track
 	CurrentTrack chan Track
 	Players      map[string]*Player
 	done         chan bool
 	ticker       *time.Ticker
 	mu           sync.Mutex
+}
+
+func NewRoom(playlist *Playlist) *Room {
+	return &Room{
+		Id:           uuid.NewString(),
+		Playlist:     playlist,
+		PlayedTracks: make([]Track, 0, len(playlist.Tracks.Items)),
+		CurrentTrack: make(chan Track, len(playlist.Tracks.Items)),
+		Players:      make(map[string]*Player),
+		done:         make(chan bool),
+	}
 }
 
 func (r *Room) Launch() {
@@ -73,8 +85,6 @@ func (r *Room) Launch() {
 			})
 		}
 
-		r.PlayedTracks = append(r.PlayedTracks, newTrack)
-
 		// Create a new set of results for each player in the room
 		for _, player := range r.Players {
 			newGuess := GuessResult{
@@ -88,6 +98,7 @@ func (r *Room) Launch() {
 		}
 
 		r.CurrentTrack <- newTrack
+		r.PlayedTracks = append(r.PlayedTracks, newTrack)
 	}
 
 	for i := 0; i < len(playlistTracks); i++ {
@@ -168,6 +179,9 @@ func (r *Room) AddPlayer(player Player) {
 	defer r.mu.Unlock()
 
 	r.Players[player.Id] = &player
+	if len(r.Players) == 1 {
+		go r.Launch()
+	}
 }
 
 func (r *Room) RemovePlayer(id string) {

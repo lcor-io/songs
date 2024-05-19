@@ -49,7 +49,7 @@ func RegisterPlayRoutes(router fiber.Router) {
 			Guesses: make(map[string]*services.GuessResult),
 		})
 
-		return utils.TemplRender(&ctx, playPage.Playlist(id))
+		return utils.TemplRender(&ctx, playPage.Playlist(room))
 	})
 
 	router.Post("/:id/guess", func(ctx fiber.Ctx) error {
@@ -77,8 +77,6 @@ func RegisterPlayRoutes(router fiber.Router) {
 			return err
 		}
 
-		go room.Launch()
-
 		// Create an http stream response
 		baseContext := c.Status(fiber.StatusOK).Context()
 		baseContext.SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
@@ -87,7 +85,7 @@ func RegisterPlayRoutes(router fiber.Router) {
 				case track := <-room.CurrentTrack:
 
 					htmlWriter := &strings.Builder{}
-					base.Audio(track).Render(context.Background(), htmlWriter)
+					base.Audio(room, track).Render(context.Background(), htmlWriter)
 					msg := htmlWriter.String()
 					if _, err := fmt.Fprintf(w, "data: %s\n\n", msg); err != nil {
 						log.Infof("Error  while flushing: %v. Closing the connection.\n", err)

@@ -3,11 +3,21 @@ package services
 import (
 	"log"
 	"net/http"
+	"slices"
+	"strings"
 
 	"github.com/go-resty/resty/v2"
 )
 
 type Track struct {
+	Album struct {
+		Name   string `json:"name"`
+		Images []struct {
+			Height int    `json:"height"`
+			Url    string `json:"url"`
+			Width  int    `json:"width"`
+		} `json:"images"`
+	} `json:"album"`
 	Artists []struct {
 		ExternalUrls struct {
 			Spotify string `json:"spotify"`
@@ -95,19 +105,26 @@ const (
 	BASE_URL_AUTH = "https://accounts.spotify.com/api/token"
 )
 
-func (s SpotifyService) GetFeaturedPlaylist() SpotifyPlaylistResult {
+func (s *SpotifyService) GetFeaturedPlaylist() SpotifyPlaylistResult {
 	res := &SpotifyPlaylistResult{}
 	s.client.R().SetResult(res).Get(BASE_URL + "/browse/featured-playlists?limit=10")
 	return *res
 }
 
-func (s SpotifyService) GetPlaylist(id string) Playlist {
-	res := &Playlist{}
-	s.client.R().SetResult(res).Get(BASE_URL + "/playlists/" + id)
-	return *res
+func (s *SpotifyService) GetPlaylist(id string) *Playlist {
+	playlist := &Playlist{}
+	s.client.R().SetResult(playlist).Get(BASE_URL + "/playlists/" + id)
+	return playlist
 }
 
-func (s SpotifyService) refreshToken() {
+func (s *SpotifyService) GetTracks(ids ...string) []Track {
+	res := []Track{}
+	joinedIds := strings.Join(ids, ",")
+	s.client.R().SetResult(res).Get(BASE_URL + "/tracks?ids=" + joinedIds)
+	return res
+}
+
+func (s *SpotifyService) refreshToken() {
 	log.Println("Refreshing Spotify token...")
 	_, err := s.client.R().
 		SetHeader("Authorization", "Basic "+s.credentials).
