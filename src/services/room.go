@@ -154,14 +154,35 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 			score := utils.GetScore(guess, normalizedTitle)
 			switch {
 			case score >= GUESS_VALIDITY_THRESHOLD:
+				// Add a bonus for the first player to find the title
+				alreadyFound := 0
+				r.mu.Lock()
+				for _, player := range r.Players {
+					if player.Id == player.Id {
+						continue
+					}
+					currentGuess := player.Guesses[currentTrack.Name]
+					if currentGuess.Title == Valid {
+						alreadyFound++
+					}
+				}
+				r.mu.Unlock()
+				switch alreadyFound {
+				case 0:
+					newGuessScore += 100
+				case 1:
+					newGuessScore += 50
+				case 2:
+					newGuessScore += 25
+				}
 				newGuessResult.Title = Valid
-				newGuessScore += 100
 			case score >= GUESS_PARTIAL_THRESHOLD:
 				newGuessResult.Title = Partial
-				newGuessScore += score
 			default:
 				newGuessResult.Title = Invalid
 			}
+			newGuessScore += score
+
 		} else {
 			newGuessScore += 100
 		}
@@ -170,24 +191,45 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 				score := utils.GetScore(guess, artist)
 				switch {
 				case score >= GUESS_VALIDITY_THRESHOLD:
+					// Add a bonus for the first player to find the title
+					alreadyFound := 0
+					r.mu.Lock()
+					for _, player := range r.Players {
+						if player.Id == player.Id {
+							continue
+						}
+						currentGuess := player.Guesses[currentTrack.Name]
+						if currentGuess.Title == Valid {
+							alreadyFound++
+						}
+					}
+					r.mu.Unlock()
+					switch alreadyFound {
+					case 0:
+						newGuessScore += 100
+					case 1:
+						newGuessScore += 50
+					case 2:
+						newGuessScore += 25
+					}
 					newGuessResult.Artists[artist] = Valid
-					newGuessScore += 100
 				case score >= GUESS_PARTIAL_THRESHOLD:
 					newGuessResult.Artists[artist] = Partial
-					newGuessScore += score
 				default:
 					newGuessResult.Artists[artist] = Invalid
 				}
+				newGuessScore += score
 			} else {
 				newGuessScore += 100
 			}
 		}
 
-		if newGuessScore > oldGuessResult.score {
+		if newGuessScore > newGuessResult.score {
 			newGuessResult.score = newGuessScore
-			player.score += (newGuessScore - oldGuessResult.score)
 		}
 	}
+
+	player.score += (newGuessResult.score - oldGuessResult.score)
 
 	// Update the score for all players in the room
 	if newGuessResult.score > oldGuessResult.score {

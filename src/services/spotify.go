@@ -106,13 +106,13 @@ const (
 
 func (s *SpotifyService) GetFeaturedPlaylist() SpotifyPlaylistResult {
 	res := &SpotifyPlaylistResult{}
-	s.client.R().SetResult(res).Get(BASE_URL + "/browse/featured-playlists?limit=10")
+	s.client.R().SetResult(res).Get(BASE_URL + "/browse/featured-playlists?limit=10&locale=fr_FR")
 	return *res
 }
 
 func (s *SpotifyService) GetPlaylist(id string) *Playlist {
 	playlist := &Playlist{}
-	s.client.R().SetResult(playlist).Get(BASE_URL + "/playlists/" + id)
+	s.client.R().SetResult(playlist).Get(BASE_URL + "/playlists/" + id + "?market=FR")
 	return playlist
 }
 
