@@ -5,16 +5,16 @@ import "lcor.io/songs/src/services"
 import "lcor.io/songs/src/utils"
 
 templ GuessResult(track services.Track, guess services.GuessResult) {
-	<div class="flex flex-col">
+	<div class="flex flex-row justify-around min-h-24 items-center">
 		<p>
 			Title:
 			switch guess.Title {
 				case services.Valid:
-					<span class="text-green-500">{ track.Name }</span>
+					<span class="text-green-500 text-xl">{ track.Name }</span>
 				case services.Partial:
-					<span class="text-orange-500">Almost</span>
+					<span class="text-orange-500 text-xl">Almost</span>
 				case services.Invalid:
-					<span class="text-red-500">Incorrect</span>
+					<span class="text-red-500 text-xl">Incorrect</span>
 			}
 		</p>
 		<ul>
@@ -23,11 +23,11 @@ templ GuessResult(track services.Track, guess services.GuessResult) {
 					Artist { fmt.Sprintf("%d", index + 1) }: 
 					switch guess.Artists[utils.Normalize(artist.Name)] {
 						case services.Valid:
-							<span class="text-green-500">{ artist.Name }</span>
+							<span class="text-green-500 text-xl">{ artist.Name }</span>
 						case services.Partial:
-							<span class="text-orange-500">Almost</span>
+							<span class="text-orange-500 text-xl">Almost</span>
 						case services.Invalid:
-							<span class="text-red-500">Incorrect</span>
+							<span class="text-red-500 text-xl">Incorrect</span>
 					}
 				</li>
 			}

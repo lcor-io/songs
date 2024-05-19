@@ -17,7 +17,7 @@ import (
 const (
 	TRACK_DURATION           = 30 * time.Second
 	GUESS_VALIDITY_THRESHOLD = 85
-	GUESS_PARTIAL_THRESHOLD  = 70
+	GUESS_PARTIAL_THRESHOLD  = 55
 )
 
 type ResultValidity uint8

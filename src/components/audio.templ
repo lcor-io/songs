@@ -33,16 +33,16 @@ templ Audio(room *services.Room, currentTrack services.Track) {
 	}
 	// Initialized guess results panel
 	<div id="guess-results" hx-swap-oob="true">
-		<div class="flex flex-col">
+		<div class="flex flex-row justify-around items-center min-h-24">
 			<p>
 				Title:
-				<span class="text-red-500">Not Found</span>
+				<span class="text-red-500 text-xl">Not Found</span>
 			</p>
 			<ul>
 				for index := range currentTrack.Artists {
 					<li>
 						Artist { fmt.Sprintf("%d", index + 1) }: 
-						<span class="text-red-500">Not Found</span>
+						<span class="text-red-500 text-xl">Not Found</span>
 					</li>
 				}
 			</ul>
