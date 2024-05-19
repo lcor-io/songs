@@ -8,7 +8,7 @@ templ Scores(scores []struct {
 }) {
 	for _, rank := range scores {
 		<div class="flex justify-between items-center">
-			{ rank.Id } : { fmt.Sprintf("%.2f", rank.Score) }
+			{ rank.Id } : { fmt.Sprintf("%d", int(rank.Score)) }
 		</div>
 	}
 }

@@ -37,8 +37,8 @@ templ Playlist(room *services.Room) {
 				</div>
 			</form>
 			<div id="guess-results"></div>
-			<div class="flex flex-row">
-				<div id="previous-tracks" class="ml-5">
+			<div class="flex flex-row justify-between px-10">
+				<div id="previous-tracks" class="ml-5 w-96">
 					if len(room.PlayedTracks) > 1 {
 						for idx, track := range room.PlayedTracks {
 							if idx != len(room.PlayedTracks) - 1 {
@@ -62,7 +62,7 @@ templ Playlist(room *services.Room) {
 						}
 					}
 				</div>
-				<div id="players-score" hx-ext="sse" sse-connect={ string(templ.URL(fmt.Sprintf("/play/%s/scores", room.Id))) } sse-swap="message"></div>
+				<div id="players-score" hx-ext="sse" sse-connect={ string(templ.URL(fmt.Sprintf("/play/%s/scores", room.Id))) } sse-swap="message" class="w-1/3"></div>
 			</div>
 		</main>
 	}

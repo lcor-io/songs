@@ -148,14 +148,14 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 		Artists: maps.Clone(oldGuessResult.Artists),
 		score:   oldGuessResult.score,
 	}
-	var newGuessScore float32 = 0
 	for _, guess := range guessCombinations {
+		var newGuessScore float32 = 0
 		if newGuessResult.Title != Valid {
 			score := utils.GetScore(guess, normalizedTitle)
 			switch {
 			case score >= GUESS_VALIDITY_THRESHOLD:
 				newGuessResult.Title = Valid
-				newGuessScore += 1
+				newGuessScore += 100
 			case score >= GUESS_PARTIAL_THRESHOLD:
 				newGuessResult.Title = Partial
 				newGuessScore += score
@@ -163,7 +163,7 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 				newGuessResult.Title = Invalid
 			}
 		} else {
-			newGuessScore += 1
+			newGuessScore += 100
 		}
 		for _, artist := range normalizedArtists {
 			if newGuessResult.Artists[artist] != Valid {
@@ -171,7 +171,7 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 				switch {
 				case score >= GUESS_VALIDITY_THRESHOLD:
 					newGuessResult.Artists[artist] = Valid
-					newGuessScore += 1
+					newGuessScore += 100
 				case score >= GUESS_PARTIAL_THRESHOLD:
 					newGuessResult.Artists[artist] = Partial
 					newGuessScore += score
@@ -179,7 +179,7 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 					newGuessResult.Artists[artist] = Invalid
 				}
 			} else {
-				newGuessScore += 1
+				newGuessScore += 100
 			}
 		}
 
@@ -194,14 +194,14 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 		scores := make([]struct {
 			Id    string
 			Score float32
-		}, len(r.Players))
+		}, 0, len(r.Players))
 		for _, player := range r.Players {
 			scores = append(scores, struct {
 				Id    string
 				Score float32
 			}{player.Id, player.score})
 		}
-		slices.SortStableFunc(scores, func(a, b struct {
+		slices.SortFunc(scores, func(a, b struct {
 			Id    string
 			Score float32
 		},
