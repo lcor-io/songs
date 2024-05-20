@@ -2,7 +2,11 @@
 module.exports = {
   content: ["./src/**/*.{html,templ}"],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        major: ["Major Mono Display", "monospace"],
+      },
+    },
   },
   // plugins: [require("daisyui")],
   //

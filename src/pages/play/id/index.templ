@@ -11,7 +11,7 @@ import (
 templ Playlist(room *services.Room) {
 	@components.Index("Play") {
 		<main>
-			<a href="/play">Back</a>
+			<a href="/play" class="ml-5 capitalize font-major font-semibold text-3xl">Back</a>
 			<div hx-ext="sse" sse-connect={ string(templ.URL(fmt.Sprintf("/play/%s/events", room.Id))) } sse-swap="message"></div>
 			<form
 				id="guess-form"
@@ -28,8 +28,7 @@ templ Playlist(room *services.Room) {
 						name="guess"
 						autofocus
 						autocomplete="off"
-						placeholder="What's your take?"
-						class="w-full h-full max-w-96 px-3 border-2 border-teal-500 rounded-lg focus:outline-teal-400 focus:outline focus:outline-2 focus:outline-offset-1"
+						class="w-full h-full max-w-96 border-t-2 border-b-2 border-black bg-transparent uppercase font-bold focus-visible:bg-transparent focus-visible:outline-none"
 					/>
 					@ui.Button(ui.ButtonProps{Type: "submit"}) {
 						Guess
@@ -42,9 +41,9 @@ templ Playlist(room *services.Room) {
 					if len(room.PlayedTracks) > 1 {
 						for idx, track := range room.PlayedTracks {
 							if idx != len(room.PlayedTracks) - 1 {
-								<div class="flex flex-row cursor-pointer gap-2 mb-5">
+								<div class="flex flex-row cursor-pointer gap-2 mb-5 group/track divide-black divide-y">
 									if len(track.Album.Images) > 0 {
-										<img src={ track.Album.Images[0].Url } alt={ track.Album.Name } class="w-16 h-16 rounded"/>
+										<img src={ track.Album.Images[0].Url } alt={ track.Album.Name } class="w-16 h-16 border border-black group-hover/track:shadow-[2px_2px_0px_black] group-hover/track:-translate-x-1 group-hover/track:-translate-y-1 group-hover/track:active:scale-95 transition-all"/>
 									}
 									<div class="flex flex-col">
 										<span>{ track.Name }</span>
