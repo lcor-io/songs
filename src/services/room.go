@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v3/log"
 	"github.com/google/uuid"
 
+	"lcor.io/songs/src/models"
 	"lcor.io/songs/src/utils"
 )
 
@@ -44,9 +45,9 @@ type RoomPlayer struct {
 
 type Room struct {
 	Id           string
-	Playlist     *Playlist
-	PlayedTracks []Track
-	CurrentTrack chan Track
+	Playlist     *models.Playlist
+	PlayedTracks []models.Track
+	CurrentTrack chan models.Track
 	Players      map[string]*RoomPlayer
 	Scores       chan []struct {
 		Id    string
@@ -57,12 +58,12 @@ type Room struct {
 	mu     sync.Mutex
 }
 
-func NewRoom(playlist *Playlist) *Room {
+func NewRoom(playlist models.Playlist) *Room {
 	return &Room{
 		Id:           uuid.NewString(),
-		Playlist:     playlist,
-		PlayedTracks: make([]Track, 0, len(playlist.Tracks.Items)),
-		CurrentTrack: make(chan Track, MAX_PLAYERS_NUMBER),
+		Playlist:     &playlist,
+		PlayedTracks: make([]models.Track, 0, len(playlist.Tracks)),
+		CurrentTrack: make(chan models.Track, MAX_PLAYERS_NUMBER),
 		Players:      make(map[string]*RoomPlayer),
 		Scores: make(chan []struct {
 			Id    string
@@ -79,18 +80,18 @@ func (r *Room) Launch() {
 		}
 	}()
 
-	playlistTracks := r.Playlist.Tracks.Items
+	playlistTracks := r.Playlist.Tracks
 	r.ticker = time.NewTicker(TRACK_DURATION)
 
 	processNewTrack := func() {
 		// Select a track random track from playlist not in already played tracks
-		newTrack := playlistTracks[rand.Intn(len(playlistTracks))].Track
-		newTrackAlreadyPlayed := slices.ContainsFunc(r.PlayedTracks, func(t Track) bool {
+		newTrack := playlistTracks[rand.Intn(len(playlistTracks))]
+		newTrackAlreadyPlayed := slices.ContainsFunc(r.PlayedTracks, func(t models.Track) bool {
 			return t.Name == newTrack.Name
 		})
 		for newTrackAlreadyPlayed {
-			newTrack = playlistTracks[rand.Intn(len(playlistTracks))].Track
-			newTrackAlreadyPlayed = slices.ContainsFunc(r.PlayedTracks, func(t Track) bool {
+			newTrack = playlistTracks[rand.Intn(len(playlistTracks))]
+			newTrackAlreadyPlayed = slices.ContainsFunc(r.PlayedTracks, func(t models.Track) bool {
 				return t.Name == newTrack.Name
 			})
 		}
@@ -255,13 +256,12 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 			return int(a.Score - b.Score)
 		})
 
-    // Send the score to all the players
-    r.mu.Lock()
-    for range r.Players {
-
-		r.Scores <- scores
-    }
-    r.mu.Unlock()
+		// Send the score to all the players
+		r.mu.Lock()
+		for range r.Players {
+			r.Scores <- scores
+		}
+		r.mu.Unlock()
 	}
 
 	player.Guesses[currentTrack.Name] = &newGuessResult

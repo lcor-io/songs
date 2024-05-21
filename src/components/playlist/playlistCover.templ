@@ -1,15 +1,15 @@
 package components
 
-import "lcor.io/songs/src/services"
+import "lcor.io/songs/src/models"
 
-templ PlaylistCover(playlist services.Playlist) {
+templ PlaylistCover(playlist models.Playlist) {
 	<div class="relative group cursor-pointer">
-		<div class="absolute w-[300px] h-[300px] bg-black"></div>
+		<div class="absolute w-[300px] h-[300px] bg-black transition-all"></div>
 		<img
-			src={ playlist.Images[0].Url }
+			src={ playlist.Image.Url }
 			width="300"
 			height="300"
-			class="relative border-black saturate-[.6] border-2 -translate-x-1 -translate-y-1 group-hover:-translate-x-2 group-hover:-translate-y-2 transition-all"
+			class="relative border-black saturate-[.6] border-2 -translate-x-1 -translate-y-1 group-hover:-translate-x-[0.375rem] group-hover:-translate-y-[0.375rem] transition-all"
 			alt={ playlist.Name }
 		/>
 	</div>

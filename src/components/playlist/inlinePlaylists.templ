@@ -1,13 +1,13 @@
 
 package components
 
-import "lcor.io/songs/src/services"
+import "lcor.io/songs/src/models"
 
-templ InlinePlaylists(title string, playlists services.SpotifyPlaylistResult) {
+templ InlinePlaylists(title string, playlists []models.Playlist) {
 	<div class="w-full grid place-items-center gap-4 grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-		for _, item := range playlists.Playlists.Items {
-			<div hx-post={ "/create/" + item.Id }>
-				@PlaylistCover(item)
+		for _, playlist := range playlists {
+			<div hx-post={ "/create/" + playlist.ID }>
+				@PlaylistCover(playlist)
 			</div>
 		}
 	</div>

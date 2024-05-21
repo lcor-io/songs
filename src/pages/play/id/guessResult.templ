@@ -1,10 +1,11 @@
 package pages
 
 import "fmt"
+import "lcor.io/songs/src/models"
 import "lcor.io/songs/src/services"
 import "lcor.io/songs/src/utils"
 
-templ GuessResult(track services.Track, guess services.GuessResult) {
+templ GuessResult(track models.Track, guess services.GuessResult) {
 	<div class="flex flex-row justify-around min-h-24 items-center">
 		<p>
 			Title:

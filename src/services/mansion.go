@@ -3,6 +3,8 @@ package services
 import (
 	"errors"
 	"sync"
+
+	"lcor.io/songs/src/models"
 )
 
 type mansion struct {
@@ -16,7 +18,7 @@ func (m *mansion) GetAll() map[string]*Room {
 	return m.rooms
 }
 
-func (m *mansion) NewRoom(playlist *Playlist) *Room {
+func (m *mansion) NewRoom(playlist models.Playlist) *Room {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
