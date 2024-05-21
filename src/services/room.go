@@ -18,6 +18,7 @@ const (
 	TRACK_DURATION           = 30 * time.Second
 	GUESS_VALIDITY_THRESHOLD = 85
 	GUESS_PARTIAL_THRESHOLD  = 55
+	MAX_PLAYERS_NUMBER       = 99
 )
 
 type ResultValidity uint8
@@ -61,12 +62,12 @@ func NewRoom(playlist *Playlist) *Room {
 		Id:           uuid.NewString(),
 		Playlist:     playlist,
 		PlayedTracks: make([]Track, 0, len(playlist.Tracks.Items)),
-		CurrentTrack: make(chan Track, len(playlist.Tracks.Items)),
+		CurrentTrack: make(chan Track, MAX_PLAYERS_NUMBER),
 		Players:      make(map[string]*RoomPlayer),
 		Scores: make(chan []struct {
 			Id    string
 			Score float32
-		}),
+		}, MAX_PLAYERS_NUMBER),
 		done: make(chan bool),
 	}
 }
@@ -94,7 +95,11 @@ func (r *Room) Launch() {
 			})
 		}
 
-		// Create a new set of results for each player in the room
+		r.PlayedTracks = append(r.PlayedTracks, newTrack)
+
+		// Create a new set of results for each player in the room and send the
+		// new track
+		r.mu.Lock()
 		for _, player := range r.Players {
 			newGuess := GuessResult{
 				Title:   Invalid,
@@ -104,10 +109,9 @@ func (r *Room) Launch() {
 				newGuess.Artists[utils.Normalize(artist.Name)] = Invalid
 			}
 			player.Guesses[newTrack.Name] = &newGuess
+			r.CurrentTrack <- newTrack
 		}
-
-		r.CurrentTrack <- newTrack
-		r.PlayedTracks = append(r.PlayedTracks, newTrack)
+		r.mu.Unlock()
 	}
 
 	for i := 0; i < len(playlistTracks); i++ {
@@ -250,7 +254,14 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 		) int {
 			return int(a.Score - b.Score)
 		})
+
+    // Send the score to all the players
+    r.mu.Lock()
+    for range r.Players {
+
 		r.Scores <- scores
+    }
+    r.mu.Unlock()
 	}
 
 	player.Guesses[currentTrack.Name] = &newGuessResult
@@ -262,7 +273,19 @@ func (r *Room) AddPlayer(player RoomPlayer) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	// Add every guesses for each elapsed tracks
+	guesses := make(map[string]*GuessResult)
+	for _, track := range r.PlayedTracks {
+		guesses[track.Name] = &GuessResult{
+			Title:   Invalid,
+			Artists: make(map[string]ResultValidity, len(track.Artists)),
+		}
+	}
+	player.Guesses = guesses
+
 	r.Players[player.Id] = &player
+
+	// If the room was empty before, we can start it
 	if len(r.Players) == 1 {
 		go r.Launch()
 	}

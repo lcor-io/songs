@@ -3,11 +3,14 @@ package components
 import "lcor.io/songs/src/services"
 
 templ PlaylistCover(playlist services.Playlist) {
-	<img
-		src={ playlist.Images[0].Url }
-		width="300"
-		height="300"
-		class="border-black border-2 hover:shadow-[3px_3px_0px_black] hover:-translate-x-1 hover:-translate-y-1 transition-all cursor-pointer"
-		alt={ playlist.Name }
-	/>
+	<div class="relative group cursor-pointer">
+		<div class="absolute w-[300px] h-[300px] bg-black"></div>
+		<img
+			src={ playlist.Images[0].Url }
+			width="300"
+			height="300"
+			class="relative border-black saturate-[.6] border-2 -translate-x-1 -translate-y-1 group-hover:-translate-x-2 group-hover:-translate-y-2 transition-all"
+			alt={ playlist.Name }
+		/>
+	</div>
 }

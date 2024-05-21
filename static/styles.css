@@ -1,3 +1,18 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  .vintage {
+    /* background-image:  */
+    /*     radial-gradient(ellipse, #0000, #0007), */
+    /*     linear-gradient(0deg, #9725, #9725), */
+    /*     url(https://i.ibb.co/vJt5HSh/noisy-texture-300x300-o10-d10-c-a82851-t1.png), */
+    /*     url(https://i.ibb.co/m4sGRmK/pexels-pixabay-247431.jpg); */
+    /* background-size: auto, auto, auto, cover; */
+    /* background-repeat: repeat; */
+    /* background-position: center; */
+    filter: saturate(0.6);
+    /* background-blend-mode: lighten */
+  }
+}

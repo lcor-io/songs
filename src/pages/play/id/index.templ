@@ -43,7 +43,7 @@ templ Playlist(room *services.Room) {
 							if idx != len(room.PlayedTracks) - 1 {
 								<div class="flex flex-row cursor-pointer gap-2 mb-5 group/track divide-black divide-y">
 									if len(track.Album.Images) > 0 {
-										<img src={ track.Album.Images[0].Url } alt={ track.Album.Name } class="w-16 h-16 border border-black group-hover/track:shadow-[2px_2px_0px_black] group-hover/track:-translate-x-1 group-hover/track:-translate-y-1 group-hover/track:active:scale-95 transition-all"/>
+										<img src={ track.Album.Images[0].Url } alt={ track.Album.Name } class="w-16 h-16 border border-black group-hover/track:shadow-[2px_2px_0px_black] group-hover/track:-translate-x-1 group-hover/track:-translate-y-1 group-hover/track:active:scale-95 transition-all saturate-[.6]"/>
 									}
 									<div class="flex flex-col">
 										<span>{ track.Name }</span>

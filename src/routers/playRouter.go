@@ -45,8 +45,7 @@ func RegisterPlayRoutes(router fiber.Router) {
 		// Create a new player with the session Id
 		session := fiber.Locals[string](ctx, "session")
 		room.AddPlayer(services.RoomPlayer{
-			Id:      session,
-			Guesses: make(map[string]*services.GuessResult),
+			Id: session,
 		})
 
 		return utils.TemplRender(&ctx, playPage.Playlist(room))
