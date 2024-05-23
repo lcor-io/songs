@@ -67,9 +67,15 @@ func main() {
 	}))
 
 	// Serve static files
-	app.Static("/static/css", "./static/css", fiber.Static{
-		MaxAge: 3600,
-	})
+	if os.Getenv("ENV") == "development" {
+		app.Static("/static", "./static", fiber.Static{
+			MaxAge: 0,
+		})
+	} else {
+		app.Static("/static", "./static", fiber.Static{
+			MaxAge: 3600,
+		})
+	}
 
 	// Register routes
 	routers.RegisterRoutes(app, spotify)
