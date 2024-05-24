@@ -1,0 +1,14 @@
+package components
+
+import "fmt"
+
+templ Scores(scores []struct {
+	Id    string
+	Score float32
+}) {
+	for _, rank := range scores {
+		<div class="flex justify-between items-center">
+			{ rank.Id } : { fmt.Sprintf("%d", int(rank.Score)) }
+		</div>
+	}
+}

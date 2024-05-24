@@ -3,7 +3,7 @@ module lcor.io/songs
 go 1.21.3
 
 require (
-	github.com/a-h/templ v0.2.663
+	github.com/a-h/templ v0.2.697
 	github.com/go-resty/resty/v2 v2.10.0
 	github.com/gofiber/fiber/v3 v3.0.0-beta.2
 	github.com/google/uuid v1.6.0
@@ -21,6 +21,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
-	golang.org/x/net v0.21.0 // indirect
-	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/net v0.24.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
 )

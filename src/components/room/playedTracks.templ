@@ -1,0 +1,36 @@
+package components
+
+import (
+	"lcor.io/songs/src/models"
+)
+
+templ PlayedTracks(tracks []models.Track, shouldSwap bool) {
+	<div
+		id="previous-tracks"
+		if shouldSwap {
+			hx-swap-oob="true"
+		}
+		class="ml-5 w-96"
+	>
+		if len(tracks) > 1 {
+			for idx, track := range tracks {
+				if idx != len(tracks) - 1 {
+					<div class="flex flex-row cursor-pointer gap-2 mb-5 group divide-black divide-y">
+						<img src={ track.Image.Url } alt={ track.Name } class="w-16 h-16 border border-black shadow-[2px_2px_0px_black] group-hover:group-active:scale-95 transition-all saturate-[.6]"/>
+						<div class="flex flex-col w-full my-auto">
+							<span>{ track.Name }</span>
+							<span>
+								for idx, artist := range track.Artists {
+									{ artist.Name }
+									if idx < len(track.Artists) - 1 {
+										;
+									}
+								}
+							</span>
+						</div>
+					</div>
+				}
+			}
+		}
+	</div>
+}

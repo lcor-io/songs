@@ -7,6 +7,8 @@ import (
 
 templ ActiveRooms(rooms map[string]*services.Room) {
 	for _, room := range rooms {
-		@components.PlaylistCover(*room.Playlist)
+		<a href={ templ.URL("/play/" + room.Id) } hx-boost="true">
+			@components.PlaylistCover(*room.Playlist)
+		</a>
 	}
 }

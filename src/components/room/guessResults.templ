@@ -1,0 +1,55 @@
+package components;
+
+import (
+	"fmt"
+
+	"lcor.io/songs/src/models"
+	"lcor.io/songs/src/services"
+	"lcor.io/songs/src/utils"
+)
+
+templ GuessResults(track models.Track, guess services.GuessResult, initilizeInput bool) {
+	<div class="flex flex-row justify-around min-h-24 items-center">
+		<p>
+			Title:
+			switch guess.Title {
+				case services.Any:
+					<span class="text-xl">Not Found</span>
+				case services.Valid:
+					<span class="text-green-500 text-xl">{ track.Name }</span>
+				case services.Partial:
+					<span class="text-orange-500 text-xl">Almost</span>
+				case services.Invalid:
+					<span class="text-red-500 text-xl">Incorrect</span>
+			}
+		</p>
+		<ul>
+			for index, artist := range track.Artists {
+				<li>
+					Artist { fmt.Sprintf("%d", index + 1) }: 
+					switch guess.Artists[utils.Normalize(artist.Name)] {
+						case services.Any:
+							<span class="text-xl">Not Found</span>
+						case services.Valid:
+							<span class="text-green-500 text-xl">{ artist.Name }</span>
+						case services.Partial:
+							<span class="text-orange-500 text-xl">Almost</span>
+						case services.Invalid:
+							<span class="text-red-500 text-xl">Incorrect</span>
+					}
+				</li>
+			}
+		</ul>
+	</div>
+	if initilizeInput {
+		<input
+			id="guess-input"
+			hx-swap-oob="true"
+			type="text"
+			name="guess"
+			autofocus
+			autocomplete="off"
+			class="w-full h-full max-w-96 border-t-2 border-b-2 border-black bg-transparent uppercase font-bold focus-visible:bg-transparent focus-visible:outline-none"
+		/>
+	}
+}

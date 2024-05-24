@@ -44,9 +44,14 @@ func RegisterPlayRoutes(router fiber.Router) {
 
 		// Create a new player with the session Id
 		session := fiber.Locals[string](ctx, "session")
-		room.AddPlayer(services.RoomPlayer{
-			Id: session,
-		})
+		user, err := services.GetUser(session)
+		if err != nil {
+			return err
+		}
+
+		room.AddPlayer(user)
+
+		log.Infof("%d players in the room", len(room.Players))
 
 		return utils.TemplRender(&ctx, playPage.Playlist(room))
 	})
@@ -109,6 +114,11 @@ func RegisterPlayRoutes(router fiber.Router) {
 			return err
 		}
 
+		// Set the players nonce
+		player := room.Players[session]
+		nonce := player.Nonce + 1
+		player.Nonce = nonce
+
 		// Create an http stream response
 		baseContext := c.Status(fiber.StatusOK).Context()
 		baseContext.SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
@@ -121,20 +131,20 @@ func RegisterPlayRoutes(router fiber.Router) {
 					msg := htmlWriter.String()
 					if _, err := fmt.Fprintf(w, "data: %s\n\n", msg); err != nil {
 						log.Infof("Error  while flushing: %v. Closing the connection.\n", err)
-						room.RemovePlayer(session)
+						room.RemovePlayer(session, nonce)
 						return
 					}
 
 					err := w.Flush()
 					if err != nil {
 						log.Infof("Error  while flushing: %v. Closing the connection.\n", err)
-						room.RemovePlayer(session)
+						room.RemovePlayer(session, nonce)
 						return
 					}
 
 				case <-baseContext.Done():
 					log.Info("Client disconnected, closing connection")
-					room.RemovePlayer(session)
+					room.RemovePlayer(session, room.Players[session].Nonce)
 					return
 				}
 			}

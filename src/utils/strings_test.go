@@ -1,10 +1,8 @@
-package utils_test
+package utils
 
 import (
 	"reflect"
 	"testing"
-
-	"lcor.io/songs/src/utils"
 )
 
 func TestNormalize(t *testing.T) {
@@ -22,7 +20,7 @@ func TestNormalize(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		normalized := utils.Normalize(tc.in)
+		normalized := Normalize(tc.in)
 		if normalized != tc.want {
 			t.Errorf("Normalize(%q) = %q; want %q", tc.in, normalized, tc.want)
 		}
@@ -38,7 +36,7 @@ func TestPermutations(t *testing.T) {
 	}
 
 	for _, tc := range testscases {
-		permutations := utils.Permutations(tc.in)
+		permutations := Permutations(tc.in)
 		if !reflect.DeepEqual(permutations, tc.want) {
 			t.Errorf("Permutations(%q) = %q; want %q", tc.in, permutations, tc.want)
 		}

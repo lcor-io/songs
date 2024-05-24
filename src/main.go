@@ -4,18 +4,16 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/compress"
 	"github.com/gofiber/fiber/v3/middleware/logger"
-	"github.com/gofiber/fiber/v3/middleware/session"
-	"github.com/google/uuid"
 
 	"github.com/joho/godotenv"
 
 	"lcor.io/songs/src/routers"
 	"lcor.io/songs/src/services"
+	"lcor.io/songs/src/utils/middlewares"
 )
 
 func main() {
@@ -37,29 +35,7 @@ func main() {
 	}
 
 	// Use session middleware
-	store := session.New(session.Config{
-		Expiration: time.Hour * 24 * 30,
-		KeyLookup:  "cookie:songs_session",
-	})
-	app.Use(func(c fiber.Ctx) error {
-		sess, err := store.Get(c)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).SendString("Error getting session")
-		}
-
-		// Assign or retrieve an id for the current session
-		id := sess.Get("id")
-		if id == nil {
-			id = uuid.New().String()
-			sess.Set("id", id)
-		}
-
-		if err := sess.Save(); err != nil {
-			return c.Status(fiber.StatusInternalServerError).SendString("Error setting session")
-		}
-		fiber.Locals(c, "session", id)
-		return c.Next()
-	})
+	app.Use(middlewares.SessionMiddleware)
 
 	// Setup compression for incoming requests
 	app.Use(compress.New(compress.Config{
@@ -80,7 +56,7 @@ func main() {
 	// Register routes
 	routers.RegisterRoutes(app, spotify)
 
-	log.Fatal(app.Listen(":42069", fiber.ListenConfig{
+	log.Fatal(app.Listen(":42068", fiber.ListenConfig{
 		EnablePrintRoutes: true,
 		EnablePrefork:     false,
 	}))

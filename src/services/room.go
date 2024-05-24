@@ -38,9 +38,11 @@ type GuessResult struct {
 
 type RoomPlayer struct {
 	Id       string
+	Name     string
 	PlayerId string
 	Guesses  map[string]*GuessResult
 	score    float32
+	Nonce    uint8 // Used to reconnect a user if a leave a room
 }
 
 type Room struct {
@@ -53,9 +55,10 @@ type Room struct {
 		Id    string
 		Score float32
 	}
-	done   chan bool
-	ticker *time.Ticker
-	mu     sync.Mutex
+	connectionNumber uint8
+	done             chan bool
+	ticker           *time.Ticker
+	mu               sync.Mutex
 }
 
 func NewRoom(playlist models.Playlist) *Room {
@@ -69,14 +72,15 @@ func NewRoom(playlist models.Playlist) *Room {
 			Id    string
 			Score float32
 		}, MAX_PLAYERS_NUMBER),
-		done: make(chan bool),
+		connectionNumber: 0,
+		done:             make(chan bool),
 	}
 }
 
 func (r *Room) Launch() {
 	defer func() {
 		for _, player := range r.Players {
-			r.RemovePlayer(player.Id)
+			r.RemovePlayer(player.Id, player.Nonce)
 		}
 	}()
 
@@ -110,6 +114,8 @@ func (r *Room) Launch() {
 				newGuess.Artists[utils.Normalize(artist.Name)] = Invalid
 			}
 			player.Guesses[newTrack.Name] = &newGuess
+		}
+		for i := uint8(0); i < r.connectionNumber; i++ {
 			r.CurrentTrack <- newTrack
 		}
 		r.mu.Unlock()
@@ -174,19 +180,20 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 				r.mu.Unlock()
 				switch alreadyFound {
 				case 0:
-					newGuessScore += 100
-				case 1:
 					newGuessScore += 50
-				case 2:
+				case 1:
 					newGuessScore += 25
+				case 2:
+					newGuessScore += 15
 				}
 				newGuessResult.Title = Valid
+				newGuessScore += 100
 			case score >= GUESS_PARTIAL_THRESHOLD:
 				newGuessResult.Title = Partial
+				newGuessScore += score
 			default:
 				newGuessResult.Title = Invalid
 			}
-			newGuessScore += score
 
 		} else {
 			newGuessScore += 100
@@ -211,19 +218,20 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 					r.mu.Unlock()
 					switch alreadyFound {
 					case 0:
-						newGuessScore += 100
-					case 1:
 						newGuessScore += 50
-					case 2:
+					case 1:
 						newGuessScore += 25
+					case 2:
+						newGuessScore += 15
 					}
 					newGuessResult.Artists[artist] = Valid
+					newGuessScore += 100
 				case score >= GUESS_PARTIAL_THRESHOLD:
 					newGuessResult.Artists[artist] = Partial
+					newGuessScore += score
 				default:
 					newGuessResult.Artists[artist] = Invalid
 				}
-				newGuessScore += score
 			} else {
 				newGuessScore += 100
 			}
@@ -246,32 +254,53 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 			scores = append(scores, struct {
 				Id    string
 				Score float32
-			}{player.Id, player.score})
+			}{player.Name, player.score})
 		}
 		slices.SortFunc(scores, func(a, b struct {
 			Id    string
 			Score float32
 		},
 		) int {
-			return int(a.Score - b.Score)
+			return int(b.Score - a.Score)
 		})
 
 		// Send the score to all the players
-		r.mu.Lock()
-		for range r.Players {
+		for i := uint8(0); i < r.connectionNumber; i++ {
 			r.Scores <- scores
 		}
-		r.mu.Unlock()
 	}
 
 	player.Guesses[currentTrack.Name] = &newGuessResult
 	return &newGuessResult
 }
 
-func (r *Room) AddPlayer(player RoomPlayer) {
-	log.Infof("Player %s joined room %s", player.Id, r.Id)
+func (r *Room) AddPlayer(user *models.User) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	r.connectionNumber += 1
+
+	// The player is already in the room, we just need to update the missing guesses
+	if player, exists := r.Players[user.ID]; exists {
+		log.Infof("Player %s reconnected to room %s", user.ID, r.Id)
+		for _, track := range r.PlayedTracks {
+			if _, exists := player.Guesses[track.Name]; !exists {
+				player.Guesses[track.Name] = &GuessResult{
+					Title:   Invalid,
+					Artists: make(map[string]ResultValidity, len(track.Artists)),
+				}
+			}
+		}
+		return
+	}
+
+	log.Infof("Player %s joined room %s", user.ID, r.Id)
+
+	player := RoomPlayer{
+		Id:       uuid.NewString(),
+		Name:     user.Name,
+		PlayerId: user.ID,
+	}
 
 	// Add every guesses for each elapsed tracks
 	guesses := make(map[string]*GuessResult)
@@ -283,7 +312,7 @@ func (r *Room) AddPlayer(player RoomPlayer) {
 	}
 	player.Guesses = guesses
 
-	r.Players[player.Id] = &player
+	r.Players[user.ID] = &player
 
 	// If the room was empty before, we can start it
 	if len(r.Players) == 1 {
@@ -291,7 +320,13 @@ func (r *Room) AddPlayer(player RoomPlayer) {
 	}
 }
 
-func (r *Room) RemovePlayer(id string) {
+func (r *Room) RemovePlayer(id string, nonce uint8) {
+	r.connectionNumber -= 1
+
+	if playerNonce := r.Players[id].Nonce; playerNonce != nonce {
+		return
+	}
+
 	log.Infof("Player %s leaved room %s", id, r.Id)
 
 	r.mu.Lock()

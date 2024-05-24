@@ -1,6 +1,6 @@
 # Run templ generation in watch mode
 live/templ:
-	templ generate --watch --proxy="http://localhost:42069" --proxybind="localhost" --proxyport="8080" --open-browser=true -v
+	templ generate --watch --proxy="http://localhost:42068" --proxybind="localhost" --proxyport="42069" --open-browser=true -v
 
 # Run air to detect any go file changes to re-buid an restart the server
 live/server:
@@ -19,7 +19,7 @@ live/css:
 # Watch for any js or css changes in the asset folder, then reload the browser via templ proxy 
 live/sync_assets:
 	go run github.com/cosmtrek/air@v1.52.0 \
-		--build.cmd "templ generate --notify-proxy --proxybind='localhost' --proxyport='8080'"  \
+		--build.cmd "templ generate --notify-proxy --proxybind='localhost' --proxyport='42069'"  \
 		--build.bin "true" \
 		--build.delay "100" \
 		--build.exclude_dir "" \
