@@ -15,13 +15,6 @@ import (
 	"lcor.io/songs/src/utils"
 )
 
-const (
-	TRACK_DURATION           = 30 * time.Second
-	GUESS_VALIDITY_THRESHOLD = 85
-	GUESS_PARTIAL_THRESHOLD  = 55
-	MAX_PLAYERS_NUMBER       = 99
-)
-
 type ResultValidity uint8
 
 const (
@@ -36,7 +29,7 @@ type GuessResult struct {
 	score   float32
 }
 
-type RoomPlayer struct {
+type Player struct {
 	Id       string
 	Name     string
 	PlayerId string
@@ -45,33 +38,90 @@ type RoomPlayer struct {
 	Nonce    uint8 // Used to reconnect a user if a leave a room
 }
 
+type roomOpts struct {
+	trackDuration          time.Duration
+	guessValidityThreshold int8
+	guessPartialThreshold  int8
+	maxPlayerNumber        int8
+}
+
+type roomOptFunc func(*roomOpts)
+
+func defaultOpts() roomOpts {
+	return roomOpts{
+		trackDuration:          30 * time.Second,
+		guessValidityThreshold: 80,
+		guessPartialThreshold:  50,
+		maxPlayerNumber:        15,
+	}
+}
+
+func WithTrackDuration(d time.Duration) roomOptFunc {
+	return func(o *roomOpts) {
+		o.trackDuration = d
+	}
+}
+
+func WithGuessValidityThreshold(t int8) roomOptFunc {
+	return func(o *roomOpts) {
+		o.guessValidityThreshold = t
+	}
+}
+
+func WithGuessPartialThreshold(t int8) roomOptFunc {
+	return func(o *roomOpts) {
+		o.guessPartialThreshold = t
+	}
+}
+
+func WithMaxPlayerNumber(n int8) roomOptFunc {
+	return func(o *roomOpts) {
+		o.maxPlayerNumber = n
+	}
+}
+
 type Room struct {
-	Id           string
+	Id string
+
+	opts roomOpts
+
 	Playlist     *models.Playlist
 	PlayedTracks []models.Track
 	CurrentTrack chan models.Track
-	Players      map[string]*RoomPlayer
+	Players      map[string]*Player
 	Scores       chan []struct {
 		Id    string
 		Score float32
 	}
+
 	connectionNumber uint8
 	done             chan bool
 	ticker           *time.Ticker
 	mu               sync.Mutex
 }
 
-func NewRoom(playlist models.Playlist) *Room {
+func NewRoom(playlist models.Playlist, opts ...roomOptFunc) *Room {
+	opt := defaultOpts()
+
+	// Apply room options in order
+	for _, fn := range opts {
+		fn(&opt)
+	}
+
 	return &Room{
-		Id:           uuid.NewString(),
+		Id: uuid.NewString(),
+
+		opts: opt,
+
 		Playlist:     &playlist,
 		PlayedTracks: make([]models.Track, 0, len(playlist.Tracks)),
-		CurrentTrack: make(chan models.Track, MAX_PLAYERS_NUMBER),
-		Players:      make(map[string]*RoomPlayer),
+		CurrentTrack: make(chan models.Track, opt.maxPlayerNumber),
+		Players:      make(map[string]*Player),
 		Scores: make(chan []struct {
 			Id    string
 			Score float32
-		}, MAX_PLAYERS_NUMBER),
+		}, opt.maxPlayerNumber),
+
 		connectionNumber: 0,
 		done:             make(chan bool),
 	}
@@ -85,7 +135,7 @@ func (r *Room) Launch() {
 	}()
 
 	playlistTracks := r.Playlist.Tracks
-	r.ticker = time.NewTicker(TRACK_DURATION)
+	r.ticker = time.NewTicker(r.opts.trackDuration)
 
 	processNewTrack := func() {
 		// Select a track random track from playlist not in already played tracks
@@ -164,7 +214,7 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 		if newGuessResult.Title != Valid {
 			score := utils.GetScore(guess, normalizedTitle)
 			switch {
-			case score >= GUESS_VALIDITY_THRESHOLD:
+			case score >= float32(r.opts.guessValidityThreshold):
 				// Add a bonus for the first player to find the title
 				alreadyFound := 0
 				r.mu.Lock()
@@ -188,7 +238,7 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 				}
 				newGuessResult.Title = Valid
 				newGuessScore += 100
-			case score >= GUESS_PARTIAL_THRESHOLD:
+			case score >= float32(r.opts.guessPartialThreshold):
 				newGuessResult.Title = Partial
 				newGuessScore += score
 			default:
@@ -202,7 +252,7 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 			if newGuessResult.Artists[artist] != Valid {
 				score := utils.GetScore(guess, artist)
 				switch {
-				case score >= GUESS_VALIDITY_THRESHOLD:
+				case score >= float32(r.opts.guessValidityThreshold):
 					// Add a bonus for the first player to find the title
 					alreadyFound := 0
 					r.mu.Lock()
@@ -226,7 +276,7 @@ func (r *Room) GuessResult(playerId, guess string) *GuessResult {
 					}
 					newGuessResult.Artists[artist] = Valid
 					newGuessScore += 100
-				case score >= GUESS_PARTIAL_THRESHOLD:
+				case score >= float32(r.opts.guessPartialThreshold):
 					newGuessResult.Artists[artist] = Partial
 					newGuessScore += score
 				default:
@@ -296,7 +346,7 @@ func (r *Room) AddPlayer(user *models.User) {
 
 	log.Infof("Player %s joined room %s", user.ID, r.Id)
 
-	player := RoomPlayer{
+	player := Player{
 		Id:       uuid.NewString(),
 		Name:     user.Name,
 		PlayerId: user.ID,
