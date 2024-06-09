@@ -11,6 +11,7 @@ import (
 
 	"github.com/joho/godotenv"
 
+	"lcor.io/songs/src/repositories"
 	"lcor.io/songs/src/routers"
 	"lcor.io/songs/src/services"
 	"lcor.io/songs/src/utils/middlewares"
@@ -28,6 +29,7 @@ func main() {
 	})
 
 	spotify := services.Spotify(os.Getenv("SPOTIFY_CREDENTIALS"))
+	roomRepository := repositories.GetLocalRepository()
 
 	// Setup logger in dev
 	if os.Getenv("ENV") == "development" {
@@ -54,7 +56,7 @@ func main() {
 	}
 
 	// Register routes
-	routers.RegisterRoutes(app, spotify)
+	routers.RegisterRoutes(app, spotify, roomRepository)
 
 	log.Fatal(app.Listen(":42068", fiber.ListenConfig{
 		EnablePrintRoutes: true,

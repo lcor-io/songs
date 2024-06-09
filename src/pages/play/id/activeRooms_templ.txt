@@ -1,3 +1,0 @@
-<a href=\"
-\" hx-boost=\"true\">
-</a>

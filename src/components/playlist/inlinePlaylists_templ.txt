@@ -1,5 +1,0 @@
-<div class=\"w-full grid place-items-center gap-4 grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4\">
-<div hx-post=\"
-\">
-</div>
-</div>

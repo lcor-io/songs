@@ -1,3 +1,0 @@
-<main hx-boost=\"true\" class=\"flex flex-col w-full\"><h1 class=\"mb-4 ml-5 text-3xl capitalize font-major font-semibold\">Active rooms</h1><div hx-get=\"play/rooms\" hx-trigger=\"revealed, every 60s\" class=\"w-full grid place-items-center gap-4 grid-cols-2 mb-5 lg:grid-cols-3 2xl:grid-cols-4\">
-<div class=\"w-[300px] h-[300px] px-4 shadow rounded-lg bg-slate-500 animate-pulse\"></div>
-</div><a href=\"/create\" class=\"h-full bg-teal-500 w-fit uppercase max-w-56 font-bold p-2 ml-5 border-black border-2 hover:shadow-[3px_3px_0px_black] hover:-translate-x-1 hover:-translate-y-1 hover:active:scale-95 transition-all\">Nouvelle partie</a></main>

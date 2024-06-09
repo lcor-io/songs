@@ -4,6 +4,7 @@ tmp
 dist
 node_modules
 *_templ.go
+*_templ.txt
 
 # Ignore env files
 *.env

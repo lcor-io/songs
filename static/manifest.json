@@ -1,0 +1,6 @@
+{
+  "name": "Rooms",
+  "short_name": "Rooms",
+  "start_url": ".",
+  "display": "standalone"
+}

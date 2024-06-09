@@ -1,16 +1,19 @@
 package routers
 
 import (
+	"time"
+
 	"github.com/gofiber/fiber/v3"
 
 	playlist "lcor.io/songs/src/components/playlist"
 	"lcor.io/songs/src/models"
 	"lcor.io/songs/src/pages/create"
+	"lcor.io/songs/src/repositories"
 	"lcor.io/songs/src/services"
 	"lcor.io/songs/src/utils"
 )
 
-func RegisterCreateRoutes(router fiber.Router, spotify *services.SpotifyService) {
+func RegisterCreateRoutes(router fiber.Router, spotify *services.SpotifyService, repo *repositories.RoomRepository) {
 	router.Get("/", func(c fiber.Ctx) error {
 		return utils.TemplRender(&c, pages.Create())
 	})
